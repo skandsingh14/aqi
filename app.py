@@ -75,7 +75,8 @@ REAL_COORDS = {
 # --- MOCK DATA FALLBACK ---
 def get_mock_city_data(city):
     import random
-    np.random.seed(hash(city) % (2**32))
+    # Remove the seed so mock data changes every hour (when cache expires)
+    # np.random.seed(hash(city) % (2**32)) 
     return {
         'list': [{
             'components': {
@@ -318,7 +319,8 @@ def api_news():
             if "Initiative" in issue or "Reduction" in issue:
                 tag_color = "#10b981"
                 severity = "low"
-            time_offset = random.randint(1, 48)
+            # Reduced offset to 1-6 hours so mock news feels "fresh" and from Today
+            time_offset = random.randint(1, 6)
             time_str = (datetime.now() - timedelta(hours=time_offset)).strftime("%b %d, %Y - %I:%M %p")
             headline = f"Alert: {city} Reports {issue} Approaching Record Levels"
             if severity == "low":
