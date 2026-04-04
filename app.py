@@ -26,7 +26,10 @@ except Exception as e:
     model = None
     print(f"Error loading model: {e}")
 
-openweathermap_api_key = os.getenv('OPENWEATHER_API_KEY', '')
+keys = os.getenv("API_KEYS", "").split(",")
+
+openweathermap_api_key = keys[0] if len(keys) > 0 else ""
+news_api_key = keys[1] if len(keys) > 1 else ""
 
 REAL_COORDS = {
     'Delhi': (28.7041, 77.1025), 'Mumbai': (19.0760, 72.8777), 'Bangalore': (12.9716, 77.5946),
@@ -284,7 +287,7 @@ def api_news():
     import json
     
     # Load the news API key (may be empty if not configured)
-    news_api_key = os.getenv('NEWS_API_KEY', '')
+    
     
     # Helper to generate mock articles (same as previous implementation)
     def generate_mock_articles():
