@@ -26,10 +26,25 @@ except Exception as e:
     model = None
     print(f"Error loading model: {e}")
 
-keys = os.getenv("API_KEYS", "").split(",")
+# --- API KEY INITIALIZATION ---
+# 1. First, check for standard individual keys (The professional way)
+openweathermap_api_key = os.getenv("OPENWEATHER_API_KEY", "")
+news_api_key = os.getenv("NEWS_API_KEY", "")
 
-openweathermap_api_key = keys[0] if len(keys) > 0 else ""
-news_api_key = keys[1] if len(keys) > 1 else ""
+# 2. If missing, look for a combined string (comma-separated)
+# We check both "API_KEYS" and the accidental "AQI_API_KEY" name seen in Render
+combined_keys = os.getenv("API_KEYS") or os.getenv("AQI_API_KEY")
+
+if combined_keys and (not openweathermap_api_key or not news_api_key):
+    # Split by comma and clean up whitespace
+    keys = [k.strip() for k in combined_keys.split(",")]
+    if len(keys) >= 1 and not openweathermap_api_key:
+        openweathermap_api_key = keys[0]
+    if len(keys) >= 2 and not news_api_key:
+        news_api_key = keys[1]
+
+# Log for the user (visible in Render logs)
+print(f"Server Initialized | Weather API: {'OK' if openweathermap_api_key else 'MISSING'} | News API: {'OK' if news_api_key else 'MISSING'}")
 
 REAL_COORDS = {
     'Delhi': (28.7041, 77.1025), 'Mumbai': (19.0760, 72.8777), 'Bangalore': (12.9716, 77.5946),
