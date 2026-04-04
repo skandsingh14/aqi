@@ -25,6 +25,33 @@ document.addEventListener("DOMContentLoaded", () => {
         card.classList.add('animate-in');
         card.style.animationDelay = `${index * 0.08}s`; // Sped up the cards
     });
+
+    // Mobile Menu Toggle
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const sidebar = document.querySelector('.sidebar');
+    
+    if (mobileMenuBtn && sidebar) {
+        mobileMenuBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+            const icon = mobileMenuBtn.querySelector('i');
+            if (sidebar.classList.contains('active')) {
+                icon.classList.replace('fa-bars-staggered', 'fa-xmark');
+            } else {
+                icon.classList.replace('fa-xmark', 'fa-bars-staggered');
+            }
+        });
+    }
+
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 992 && 
+            sidebar && sidebar.classList.contains('active') && 
+            !sidebar.contains(e.target) && 
+            !mobileMenuBtn.contains(e.target)) {
+            sidebar.classList.remove('active');
+            mobileMenuBtn.querySelector('i').classList.replace('fa-xmark', 'fa-bars-staggered');
+        }
+    });
 });
 
 // Global approximation formula for AQI display matching Indian Standards (Max Sub-Index)

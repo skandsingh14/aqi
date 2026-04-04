@@ -6,12 +6,25 @@
     margin-bottom: 2rem;
 }
 
-/* 4 columns layout for top stats */
-.col-span-3 { grid-column: span 3; }
-.col-span-4 { grid-column: span 4; }
-.col-span-6 { grid-column: span 6; }
-.col-span-8 { grid-column: span 8; }
-.col-span-12 { grid-column: span 12; }
+@media (max-width: 992px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
+/* columns layout for top stats */
+.col-span-3, .col-span-4, .col-span-6, .col-span-8, .col-span-12 {
+    grid-column: span 12;
+}
+
+@media (min-width: 993px) {
+    .col-span-3 { grid-column: span 3; }
+    .col-span-4 { grid-column: span 4; }
+    .col-span-6 { grid-column: span 6; }
+    .col-span-8 { grid-column: span 8; }
+    .col-span-12 { grid-column: span 12; }
+}
 
 /* Stat Cards */
 .stat-card {
