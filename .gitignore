@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+.env
+*.pyc
+data/aqi_cache.json
+archive (2).zip
+shareable_project.zip
+.antigravity/
+.pytest_cache/
+.ipynb_checkpoints/
+*.db
+*.sqlite3

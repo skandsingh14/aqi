@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Health Recommendations{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="col-span-12 card glass-panel" style="margin-bottom:1rem;">
+        <h3 style="margin-bottom:1rem;">Check Local Health Advisory</h3>
+        <div style="display:flex; gap:1rem; align-items:center;">
+            <select id="health-city" class="input-control" style="max-width:300px;">
+                <option value="">-- Select your city --</option>
+            </select>
+            <div id="health-loader" class="spinner" style="display:none; width: 20px; height: 20px;"></div>
+        </div>
+    </div>
+    
+    <div id="advice-section" class="col-span-12" style="display:none;">
+        <div class="dashboard-grid">
+            <div class="col-span-4 card glass-panel" style="text-align:center;">
+                <h4 style="color:var(--text-secondary); margin-bottom:1rem;">Current AQI in <span id="disp-city"></span></h4>
+                <div id="health-aqi" style="font-size:5rem; font-weight:700; line-height:1;">--</div>
+                <div id="health-badge" class="badge" style="margin-top:1rem;">--</div>
+            </div>
+            
+            <div class="col-span-8 card glass-panel" id="advice-panel" style="border-left: 5px solid transparent;">
+                <h2 id="advice-title" style="margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+                    <i class="fa-solid fa-heart-pulse"></i> Comprehensive Health Advice
+                </h2>
+                <div id="advice-content" style="font-size:1.1rem; line-height:1.6; color:var(--text-primary);">
+                    <!-- Dynamic Content -->
+                </div>
+                
+                <div style="margin-top:2rem; display:flex; gap:1rem;" id="advice-icons">
+                    <!-- Icons -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('health-city');
+    INDIAN_CITIES.forEach(city => {
+        const opt = document.createElement('option');
+        opt.value = city; opt.textContent = city;
+        sel.appendChild(opt);
+    });
+    
+    sel.addEventListener('change', async (e) => {
+        const city = e.target.value;
+        if(!city) return document.getElementById('advice-section').style.display = 'none';
+        
+        document.getElementById('health-loader').style.display = 'block';
+        
+        try {
+            const res = await fetch(`/api/pollution?city=${city}`);
+            const data = await res.json();
+            if(data.data) {
+                const aqi = calculateProxyAqi(data.data);
+                const info = getAqiInfo(aqi);
+                
+                document.getElementById('advice-section').style.display = 'block';
+                document.getElementById('disp-city').textContent = city;
+                
+                document.getElementById('health-aqi').textContent = aqi;
+                document.getElementById('health-aqi').className = info.colorClass;
+                
+                document.getElementById('health-badge').textContent = info.label;
+                document.getElementById('health-badge').className = `badge ${info.bgClass}`;
+                
+                const panel = document.getElementById('advice-panel');
+                panel.style.borderLeftColor = info.colorHex;
+                
+                const content = document.getElementById('advice-content');
+                const icons = document.getElementById('advice-icons');
+                
+                if(aqi <= 50) {
+                    content.innerHTML = `<p>Air quality is great! A perfect day for outdoor activities. The air pollution poses little to no risk. Enjoy the outdoors and ventilate your home.</p>`;
+                    icons.innerHTML = `<div class="badge bg-good"><i class="fa-solid fa-person-running"></i> Outdoor Sports OK</div>
+                                     <div class="badge bg-good"><i class="fa-solid fa-house-chimney-window"></i> Open Windows</div>`;
+                } else if(aqi <= 100) {
+                    content.innerHTML = `<p>Air quality is acceptable. However, unusually sensitive people should consider reducing prolonged or heavy exertion outdoors. It is generally safe for normal activities.</p>`;
+                    icons.innerHTML = `<div class="badge bg-moderate"><i class="fa-solid fa-person-running"></i> Light Outdoor Sports OK</div>`;
+                } else if(aqi <= 200) {
+                    content.innerHTML = `<p><strong>Poor Air Quality.</strong> Children, the elderly, and those with respiratory or heart conditions should reduce prolonged outdoor exertion. Healthy individuals might start feeling eye and throat irritation.</p>`;
+                    icons.innerHTML = `<div class="badge bg-poor"><i class="fa-solid fa-mask"></i> Consider Mask for Sensitive Groups</div>
+                                     <div class="badge bg-poor"><i class="fa-solid fa-ban"></i> Avoid Heavy Exertion</div>`;
+                } else if(aqi <= 300) {
+                    content.innerHTML = `<p><strong>Very Poor Air Quality.</strong> Health Alert! The risk of health effects is increased for everyone. Everyone should avoid prolonged outdoor exertion. Keep windows closed and consider using an air purifier indoors.</p>`;
+                    icons.innerHTML = `<div class="badge bg-vpoor"><i class="fa-solid fa-mask"></i> Wear N95 Mask Outdoors</div>
+                                     <div class="badge bg-vpoor"><i class="fa-solid fa-ban"></i> Avoid Outdoor Activities</div>
+                                     <div class="badge bg-vpoor"><i class="fa-solid fa-fan"></i> Use Air Purifier</div>`;
+                } else {
+                    content.innerHTML = `<p><strong>Severe Air Quality!</strong> Health Warning of Emergency Conditions. The entire population is highly likely to be affected. **Stay indoors** and keep activity levels very low. Ensure all windows are closed and run air filtration continuously.</p>`;
+                    icons.innerHTML = `<div class="badge bg-severe"><i class="fa-solid fa-house"></i> STAY INDOORS</div>
+                                     <div class="badge bg-severe"><i class="fa-solid fa-mask"></i> Mandatory N95 if going out</div>
+                                     <div class="badge bg-severe"><i class="fa-solid fa-truck-medical"></i> Immediate risk to health</div>`;
+                }
+            }
+        } catch(e) {
+            console.error(e);
+        } finally {
+            document.getElementById('health-loader').style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

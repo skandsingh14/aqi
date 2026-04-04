@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="col-span-12 card glass-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>Live AQI Comparison (Major Cities)</h3>
+            <button class="btn btn-outline" id="refresh-btn"><i class="fa-solid fa-rotate"></i> Refresh Data</button>
+        </div>
+        <div id="chart-loader" class="loader-container"><div class="spinner"></div></div>
+        <div class="chart-container large">
+            <canvas id="aqiBarChart" style="display:none;"></canvas>
+        </div>
+    </div>
+    
+    <div class="col-span-6 card glass-panel">
+        <h3 style="margin-bottom:1rem;">Pollutant Breakdown (Average)</h3>
+        <div class="chart-container">
+            <canvas id="pollutantPieChart" style="display:none;"></canvas>
+        </div>
+    </div>
+    
+    <div class="col-span-6 card glass-panel">
+        <h3 style="margin-bottom:1rem;">Top Polluted Cities Ranking</h3>
+        <ul id="ranking-list" class="city-list">
+            <!-- Populated by JS -->
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const refreshBtn = document.getElementById('refresh-btn');
+    const loader = document.getElementById('chart-loader');
+    const aqiCanvas = document.getElementById('aqiBarChart');
+    const pieCanvas = document.getElementById('pollutantPieChart');
+    const rankingList = document.getElementById('ranking-list');
+    
+    let aqiChartInstance = null;
+    let pieChartInstance = null;
+    
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.font.family = "'Outfit', sans-serif";
+
+    async function loadDashboardData() {
+        loader.style.display = 'flex';
+        aqiCanvas.style.display = 'none';
+        pieCanvas.style.display = 'none';
+        rankingList.innerHTML = '';
+        
+        if (aqiChartInstance) aqiChartInstance.destroy();
+        if (pieChartInstance) pieChartInstance.destroy();
+        
+        let citiesData = [];
+        let avgPollutants = { pm2_5:0, pm10:0, no2:0, so2:0, o3:0 };
+        
+        // Fetch all city data in one request to avoid sequential latency
+        const bulkRes = await fetch(`/api/pollution_bulk?cities=${INDIAN_CITIES.join(',')}`);
+        const bulkData = await bulkRes.json();
+        if (Array.isArray(bulkData)) {
+            bulkData.forEach(item => {
+                if (item.data) {
+                    const aqi = calculateProxyAqi(item.data);
+                    citiesData.push({ city: item.city, aqi, comps: item.data });
+                    avgPollutants.pm2_5 += item.data.pm2_5;
+                    avgPollutants.pm10 += item.data.pm10;
+                    avgPollutants.no2 += item.data.no2;
+                    avgPollutants.so2 += item.data.so2;
+                    avgPollutants.o3 += item.data.o3;
+                }
+            });
+        }
+        
+        if(citiesData.length === 0) return;
+        
+        // Sort for ranking
+        citiesData.sort((a,b) => b.aqi - a.aqi);
+        
+        // Render Ranking list
+        citiesData.slice(0, 5).forEach((item, index) => {
+            const info = getAqiInfo(item.aqi);
+            const li = document.createElement('li');
+            li.className = 'city-list-item';
+            li.innerHTML = `
+                <div class="city-name">
+                    <span style="display:inline-block; width:24px; height:24px; background:rgba(255,255,255,0.1); border-radius:50%; text-align:center; line-height:24px;">${index+1}</span>
+                    ${item.city}
+                </div>
+                <div class="badge ${info.bgClass}">AQI: ${item.aqi}</div>
+            `;
+            rankingList.appendChild(li);
+        });
+        
+        // Render Bar Chart
+        const labels = citiesData.map(d => d.city);
+        const aqiValues = citiesData.map(d => d.aqi);
+        const bgColors = citiesData.map(d => getAqiInfo(d.aqi).colorHex);
+        
+        loader.style.display = 'none';
+        aqiCanvas.style.display = 'block';
+        pieCanvas.style.display = 'block';
+        
+        aqiChartInstance = new Chart(aqiCanvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Live AQI',
+                    data: aqiValues,
+                    backgroundColor: bgColors,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, max: 500, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+        
+        // Render Pie Chart
+        const n = citiesData.length;
+        pieChartInstance = new Chart(pieCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['PM2.5', 'PM10', 'NO2', 'SO2', 'O3'],
+                datasets: [{
+                    data: [
+                        avgPollutants.pm2_5/n, 
+                        avgPollutants.pm10/n, 
+                        avgPollutants.no2/n, 
+                        avgPollutants.so2/n, 
+                        avgPollutants.o3/n
+                    ],
+                    backgroundColor: ['#38bdf8', '#818cf8', '#f472b6', '#34d399', '#fbbf24'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right' }
+                },
+                cutout: '70%'
+            }
+        });
+    }
+    
+    refreshBtn.addEventListener('click', loadDashboardData);
+    
+    // Initial load
+    loadDashboardData();
+    
+    // Auto refresh every 5 mins
+    setInterval(loadDashboardData, 5 * 60 * 1000);
+});
+</script>
+{% endblock %}

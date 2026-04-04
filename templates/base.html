@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>India Air Quality Prediction System</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Map styles -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Global Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar glass-panel">
+            <div class="brand">
+                <i class="fa-solid fa-leaf gradient-text"></i>
+                <span class="gradient-text">EcoQ India</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fa-solid fa-house"></i> Home</a></li>
+                <li><a href="/prediction" {% if request.path == '/prediction' %}class="active"{% endif %}><i class="fa-solid fa-wand-magic-sparkles"></i> Predict</a></li>
+                <li><a href="/dashboard" {% if request.path == '/dashboard' %}class="active"{% endif %}><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                <li><a href="/map" {% if request.path == '/map' %}class="active"{% endif %}><i class="fa-solid fa-map-location-dot"></i> India Map</a></li>
+                <li><a href="/compare" {% if request.path == '/compare' %}class="active"{% endif %}><i class="fa-solid fa-code-compare"></i> Compare</a></li>
+                <li><a href="/future" {% if request.path == '/future' %}class="active"{% endif %}><i class="fa-solid fa-calendar-days"></i> Future Prediction</a></li>
+                <li><a href="/health" {% if request.path == '/health' %}class="active"{% endif %}><i class="fa-solid fa-heart-pulse"></i> Health Advices</a></li>
+                <li><a href="/news" {% if request.path == '/news' %}class="active"{% endif %}><i class="fa-solid fa-newspaper"></i> Global News</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <p>Advanced Air Quality Prediction System</p>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <div class="page-title">
+                    <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
+                <div class="user-info glass-panel small-glass">
+                    <span class="live-indicator"><span class="dot pulse"></span> Live Data API</span>
+                </div>
+            </header>
+            
+            <div class="content-wrapper">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

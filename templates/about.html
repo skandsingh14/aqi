@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block page_title %}About Project{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="col-span-12 card glass-panel hero-section">
+        <h1 class="hero-title gradient-text">EcoQ India</h1>
+        <p class="hero-subtitle">Advanced Air Quality Monitoring & Prediction System</p>
+    </div>
+    
+    <div class="col-span-6 card glass-panel">
+        <h3 style="margin-bottom:1rem;"><i class="fa-solid fa-circle-info"></i> Project Description</h3>
+        <p style="color:var(--text-secondary); line-height:1.6;">
+            The India Air Quality Prediction System is a full-stack data-driven web application designed to monitor, analyze, and predict the air quality of major Indian cities in real-time. It provides interactive visualizations, comparisons, and machine learning-powered predictions to help citizens make informed health decisions.
+        </p>
+    </div>
+    
+    <div class="col-span-6 card glass-panel">
+        <h3 style="margin-bottom:1rem;"><i class="fa-solid fa-code"></i> Technologies Used</h3>
+        <ul style="color:var(--text-secondary); line-height:1.6; padding-left: 1.5rem;">
+            <li><strong>Frontend:</strong> HTML5, CSS3 (Glassmorphism UI), Vanilla JavaScript</li>
+            <li><strong>Libraries:</strong> Chart.js (Data Visualization), Leaflet.js (Interactive Maps)</li>
+            <li><strong>Backend:</strong> Python, Flask Framework</li>
+            <li><strong>Machine Learning:</strong> scikit-learn (Random Forest Regressor), pandas, numpy</li>
+            <li><strong>Live Data:</strong> OpenWeatherMap Air Pollution API & Geocoding API</li>
+        </ul>
+    </div>
+    
+    <div class="col-span-6 card glass-panel">
+        <h3 style="margin-bottom:1rem;"><i class="fa-solid fa-brain"></i> Machine Learning Model</h3>
+        <p style="color:var(--text-secondary); line-height:1.6; margin-bottom: 1rem;">
+            The system employs a <strong>Random Forest Regressor</strong> algorithm to predict Air Quality Index based on real-time specific pollutant concentrations.
+        </p>
+        <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
+            <strong>Features:</strong> PM2.5, PM10, NO2, SO2, CO, O3<br>
+            <strong>Target:</strong> AQI Category Label
+        </div>
+        <p style="color:var(--text-secondary); line-height:1.6; margin-top: 1rem;">
+            Random Forest was chosen for its robustness to outliers and non-linear relationships characteristic of environmental data.
+        </p>
+    </div>
+    
+    <div class="col-span-6 card glass-panel">
+        <h3 style="margin-bottom:1rem;"><i class="fa-solid fa-database"></i> Dataset & Operation</h3>
+        <p style="color:var(--text-secondary); line-height:1.6;">
+            <strong>Training Data:</strong> A synthetically generated but statistically valid proxy dataset mirroring realistic pollution levels across Indian cities was used to train the base model.
+            <br><br>
+            <strong>Live Operation:</strong> In real-time, the application fetches the latest local components (PM2.5, etc.) from the OpenWeather API, feeds them into our pre-trained <code>model.pkl</code>, and outputs an accurately estimated and color-coded AQI.
+        </p>
+    </div>
+</div>
+{% endblock %}

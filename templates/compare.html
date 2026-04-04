@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block page_title %}City Comparison Tool{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="col-span-12 card glass-panel" style="margin-bottom:2rem;">
+        <h3 style="margin-bottom:1rem;">Select Cities to Compare</h3>
+        <div style="display:flex; gap:1.5rem; align-items:center;">
+            <div class="input-group" style="flex:1;">
+                <label>City 1</label>
+                <select id="city1" class="input-control"></select>
+            </div>
+            <div style="font-size:2rem; font-weight:700; color:var(--text-muted); margin-top:0.5rem;">VS</div>
+            <div class="input-group" style="flex:1;">
+                <label>City 2</label>
+                <select id="city2" class="input-control"></select>
+            </div>
+            <div style="margin-top:0.5rem;">
+                <button id="compare-btn" class="btn"><i class="fa-solid fa-code-compare"></i> Compare</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Comparison Results -->
+    <div class="col-span-12 card glass-panel" id="result-box" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+            <h3>Comparison Report</h3>
+            <div id="verdict-badge" class="badge">--</div>
+        </div>
+        
+        <div class="dashboard-grid" style="margin-bottom:0;">
+            <div class="col-span-6" style="text-align:center;">
+                <h4 id="city1-name" style="font-size: 1.5rem; margin-bottom:0.5rem;">City 1</h4>
+                <div id="city1-aqi" style="font-size: 4rem; font-weight:700; line-height:1;">--</div>
+                <div id="city1-status" class="badge" style="margin-bottom:1rem;">--</div>
+            </div>
+            
+            <div class="col-span-6" style="text-align:center;">
+                <h4 id="city2-name" style="font-size: 1.5rem; margin-bottom:0.5rem;">City 2</h4>
+                <div id="city2-aqi" style="font-size: 4rem; font-weight:700; line-height:1;">--</div>
+                <div id="city2-status" class="badge" style="margin-bottom:1rem;">--</div>
+            </div>
+            
+            <div class="col-span-12" style="margin-top: 2rem;">
+                <h4 style="margin-bottom:1rem; text-align:center;">Pollutant Levels Comparison</h4>
+                <div class="chart-container">
+                    <canvas id="compareRadarChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const city1Sel = document.getElementById('city1');
+    const city2Sel = document.getElementById('city2');
+    
+    INDIAN_CITIES.forEach((city, i) => {
+        const opt1 = document.createElement('option');
+        opt1.value = city; opt1.textContent = city;
+        city1Sel.appendChild(opt1);
+        
+        const opt2 = document.createElement('option');
+        opt2.value = city; opt2.textContent = city;
+        city2Sel.appendChild(opt2);
+    });
+    
+    city2Sel.selectedIndex = 1; // Different default
+    
+    let chartInstance = null;
+    
+    Chart.defaults.color = '#94a3b8';
+
+    document.getElementById('compare-btn').addEventListener('click', async () => {
+        const c1 = city1Sel.value;
+        const c2 = city2Sel.value;
+        if(c1 === c2) return alert("Please select two different cities.");
+        
+        const btn = document.getElementById('compare-btn');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading';
+        
+        try {
+            const [res1, res2] = await Promise.all([
+                fetch(`/api/pollution?city=${c1}`).then(r => r.json()),
+                fetch(`/api/pollution?city=${c2}`).then(r => r.json())
+            ]);
+            
+            if(res1.data && res2.data) {
+                const aqi1 = calculateProxyAqi(res1.data);
+                const aqi2 = calculateProxyAqi(res2.data);
+                const info1 = getAqiInfo(aqi1);
+                const info2 = getAqiInfo(aqi2);
+                
+                document.getElementById('result-box').style.display = 'block';
+                
+                // City 1
+                document.getElementById('city1-name').textContent = c1;
+                document.getElementById('city1-aqi').textContent = aqi1;
+                document.getElementById('city1-aqi').className = info1.colorClass;
+                document.getElementById('city1-status').textContent = info1.label;
+                document.getElementById('city1-status').className = `badge ${info1.bgClass}`;
+                
+                // City 2
+                document.getElementById('city2-name').textContent = c2;
+                document.getElementById('city2-aqi').textContent = aqi2;
+                document.getElementById('city2-aqi').className = info2.colorClass;
+                document.getElementById('city2-status').textContent = info2.label;
+                document.getElementById('city2-status').className = `badge ${info2.bgClass}`;
+                
+                // Verdict
+                const verdict = document.getElementById('verdict-badge');
+                if(aqi1 > aqi2) {
+                    verdict.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${c1} is more polluted than ${c2}`;
+                    verdict.className = `badge ${info1.bgClass}`;
+                } else if(aqi2 > aqi1) {
+                    verdict.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${c2} is more polluted than ${c1}`;
+                    verdict.className = `badge ${info2.bgClass}`;
+                } else {
+                    verdict.innerHTML = `Both cities have similar air quality`;
+                    verdict.className = `badge bg-moderate`;
+                }
+                
+                // Chart
+                if(chartInstance) chartInstance.destroy();
+                
+                const ctx = document.getElementById('compareRadarChart');
+                chartInstance = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['PM2.5', 'PM10', 'NO2', 'SO2', 'O3'],
+                        datasets: [
+                            {
+                                label: c1,
+                                data: [res1.data.pm2_5, res1.data.pm10, res1.data.no2, res1.data.so2, res1.data.o3],
+                                backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                                borderColor: 'rgba(56, 189, 248, 1)',
+                                pointBackgroundColor: 'rgba(56, 189, 248, 1)'
+                            },
+                            {
+                                label: c2,
+                                data: [res2.data.pm2_5, res2.data.pm10, res2.data.no2, res2.data.so2, res2.data.o3],
+                                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                                borderColor: 'rgba(239, 68, 68, 1)',
+                                pointBackgroundColor: 'rgba(239, 68, 68, 1)'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                angleLines: { color: 'rgba(255,255,255,0.05)' },
+                                pointLabels: { color: '#94a3b8', font: { size: 14 } }
+                            }
+                        }
+                    }
+                });
+            }
+        } catch(e) {
+            console.error(e);
+        } finally {
+            btn.innerHTML = '<i class="fa-solid fa-code-compare"></i> Compare';
+        }
+    });
+});
+</script>
+{% endblock %}

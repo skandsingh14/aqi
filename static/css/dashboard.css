@@ -1,0 +1,152 @@
+/* Dashboard specific layouts */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+/* 4 columns layout for top stats */
+.col-span-3 { grid-column: span 3; }
+.col-span-4 { grid-column: span 4; }
+.col-span-6 { grid-column: span 6; }
+.col-span-8 { grid-column: span 8; }
+.col-span-12 { grid-column: span 12; }
+
+/* Stat Cards */
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+}
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+.stat-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Badge values */
+.badge {
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.bg-good { background: rgba(16, 185, 129, 0.2); color: var(--aqi-good); }
+.bg-moderate { background: rgba(234, 179, 8, 0.2); color: var(--aqi-moderate); }
+.bg-poor { background: rgba(249, 115, 22, 0.2); color: var(--aqi-poor); }
+.bg-vpoor { background: rgba(239, 68, 68, 0.2); color: var(--aqi-vpoor); }
+.bg-severe { background: rgba(159, 18, 57, 0.2); color: var(--aqi-severe); }
+
+.text-good { color: var(--aqi-good); }
+.text-moderate { color: var(--aqi-moderate); }
+.text-poor { color: var(--aqi-poor); }
+.text-vpoor { color: var(--aqi-vpoor); }
+.text-severe { color: var(--aqi-severe); }
+
+/* Chart Containers */
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+.chart-container.large {
+    height: 400px;
+}
+
+/* Legend Box */
+.legend-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.legend-color {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+}
+
+/* Lists */
+.city-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.city-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    transition: var(--transition);
+}
+.city-list-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+.city-name {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Loading Overlay */
+.loader-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    min-height: 200px;
+}
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border-glass);
+    border-top: 4px solid var(--accent-1);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Map sizing */
+#india-map {
+    height: 600px;
+    width: 100%;
+    border-radius: 12px;
+    z-index: 1;
+}
+
+/* Specific Home page layouts */
+.hero-section {
+    text-align: center;
+    padding: 3rem 0;
+    margin-bottom: 2rem;
+}
+.hero-title {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+}
+.hero-subtitle {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto;
+}

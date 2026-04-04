@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Home Overview{% endblock %}
+
+{% block content %}
+<div class="ticker-wrap">
+    <div class="ticker-content" id="live-ticker">
+        <span class="ticker-item"><i class="fa-solid fa-satellite-dish pulse"></i> Fetching live sensors...</span>
+    </div>
+</div>
+
+<div class="hero-section glass-panel">
+    <h1 class="hero-title gradient-text">India Air Quality Prediction System</h1>
+    <p class="hero-subtitle">Real-time monitoring, advanced machine learning predictions, and comprehensive health analytics for major Indian cities.</p>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Top Stats -->
+    <div class="col-span-4 card glass-panel stat-card">
+        <div class="stat-header">
+            <h3>Avg AQI (Major Cities)</h3>
+            <i class="fa-solid fa-cloud"></i>
+        </div>
+        <div>
+            <div id="avg-aqi" class="stat-value">--</div>
+            <div id="avg-status" class="badge bg-moderate">Loading...</div>
+        </div>
+    </div>
+    
+    <div class="col-span-4 card glass-panel stat-card">
+        <div class="stat-header">
+            <h3>Most Polluted City</h3>
+            <i class="fa-solid fa-triangle-exclamation text-severe"></i>
+        </div>
+        <div>
+            <div id="worst-city" class="stat-value" style="font-size: 2rem;">--</div>
+            <div class="stat-label">AQI: <span id="worst-aqi" class="text-severe font-bold">--</span></div>
+        </div>
+    </div>
+    
+    <div class="col-span-4 card glass-panel stat-card">
+        <div class="stat-header">
+            <h3>Least Polluted City</h3>
+            <i class="fa-solid fa-leaf text-good"></i>
+        </div>
+        <div>
+            <div id="best-city" class="stat-value" style="font-size: 2rem;">--</div>
+            <div class="stat-label">AQI: <span id="best-aqi" class="text-good font-bold">--</span></div>
+        </div>
+    </div>
+
+    <!-- Live City List -->
+    <div class="col-span-8 card glass-panel">
+        <h3 style="margin-bottom: 1.5rem;">Live AQI Overview</h3>
+        <div id="home-loader" class="loader-container"><div class="spinner"></div></div>
+        <ul id="live-cities-list" class="city-list" style="display:none;">
+            <!-- Rendered by JS -->
+        </ul>
+    </div>
+
+    <!-- Legend -->
+    <div class="col-span-4 card glass-panel">
+        <h3 style="margin-bottom: 1.5rem;">AQI Legend</h3>
+        <div class="legend-box">
+            <div class="legend-item">
+                <div class="legend-color" style="background:#10b981;"></div>
+                <div><strong>0-50:</strong> Good (Green)</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background:#eab308;"></div>
+                <div><strong>51-100:</strong> Moderate (Yellow)</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background:#f97316;"></div>
+                <div><strong>101-200:</strong> Poor (Orange)</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background:#ef4444;"></div>
+                <div><strong>201-300:</strong> Very Poor (Red)</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background:#9f1239;"></div>
+                <div><strong>301+:</strong> Severe (Maroon)</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const listContainer = document.getElementById('live-cities-list');
+    const loader = document.getElementById('home-loader');
+    
+    let cityData = [];
+    
+    // Fetch extended list for ticker
+    const topCities = ['Delhi', 'Mumbai', 'Bangalore', 'Kolkata', 'Chennai', 'Hyderabad', 'Pune', 'Lucknow', 'Ahmedabad', 'Patna', 'Gurgaon', 'Noida', 'Jaipur', 'Chandigarh'];
+    
+    // Fetch all cities in parallel using the new bulk API
+    const bulkRes = await fetch(`/api/pollution_bulk?cities=${topCities.join(',')}`);
+    const bulkData = await bulkRes.json();
+    
+    if (Array.isArray(bulkData)) {
+        bulkData.forEach(item => {
+            if (item.data) {
+                const aqi = calculateProxyAqi(item.data);
+                cityData.push({ city: item.city, aqi, comps: item.data });
+            }
+        });
+    }
+    
+    loader.style.display = 'none';
+    listContainer.style.display = 'flex';
+    
+    if (cityData.length > 0) {
+        // --- Populate the Infinite Scrolling Marquee Ticker ---
+        const ticker = document.getElementById('live-ticker');
+        ticker.innerHTML = '';
+        // Duplicate multiple cycles to ensure seamless scrolling width
+        for(let loop = 0; loop < 3; loop++) {
+            cityData.forEach(item => {
+                const info = getAqiInfo(item.aqi);
+                ticker.innerHTML += `<span class="ticker-item" style="margin-right:2rem;"><i class="fa-solid fa-cloud ${info.colorClass}" style="margin-right:0.3rem;"></i> ${item.city}: <span class="${info.colorClass}">${item.aqi}</span></span>`;
+            });
+        }
+
+        // --- Sort worst to best for Main UI ---
+        cityData.sort((a,b) => b.aqi - a.aqi);
+        
+        let totalAqi = 0;
+        
+        // Take top 6 for the list
+        const displayList = cityData.slice(0, 6);
+        displayList.forEach(item => {
+            totalAqi += item.aqi;
+            const info = getAqiInfo(item.aqi);
+            
+            const li = document.createElement('li');
+            li.className = 'city-list-item';
+            li.innerHTML = `
+                <div class="city-name"><i class="fa-solid fa-location-dot ${info.colorClass}"></i> ${item.city}</div>
+                <div style="display:flex; gap: 1rem; align-items:center;">
+                    <div class="stat-label">PM2.5: ${item.comps.pm2_5.toFixed(1)}</div>
+                    <div class="badge ${info.bgClass}" style="box-shadow: 0 0 15px ${info.colorHex}40;">AQI: ${item.aqi} - ${info.label}</div>
+                </div>
+            `;
+            listContainer.appendChild(li);
+        });
+        
+        // Update stats
+        const avg = Math.floor(totalAqi / displayList.length);
+        const avgInfo = getAqiInfo(avg);
+        document.getElementById('avg-aqi').textContent = avg;
+        document.getElementById('avg-aqi').className = `stat-value ${avgInfo.colorClass}`;
+        document.getElementById('avg-status').textContent = avgInfo.label;
+        document.getElementById('avg-status').className = `badge ${avgInfo.bgClass}`;
+        document.getElementById('avg-status').style.boxShadow = `0 0 15px ${avgInfo.colorHex}40`;
+        
+        const worst = cityData[0];
+        const best = cityData[cityData.length - 1];
+        
+        document.getElementById('worst-city').textContent = worst.city;
+        document.getElementById('worst-aqi').textContent = worst.aqi;
+        
+        document.getElementById('best-city').textContent = best.city;
+        document.getElementById('best-aqi').textContent = best.aqi;
+        
+    } else {
+        listContainer.innerHTML = '<p>Failed to load data. Please check backend.</p>';
+    }
+});
+</script>
+{% endblock %}

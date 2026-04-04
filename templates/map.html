@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Interactive India Map{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="col-span-12 card glass-panel" style="padding:0; overflow:hidden; border-radius: 16px;">
+        <div id="india-map" style="height: 75vh; min-height: 700px; width: 100%;"></div>
+    </div>
+    
+    <div class="col-span-12 card glass-panel" style="display:flex; justify-content:space-around; align-items:center; flex-wrap:wrap; gap:2rem;">
+        <div>
+            <h3 style="margin-bottom:1rem;">Top Polluted Area</h3>
+            <div id="map-worst" class="badge bg-severe" style="font-size:1rem; display:none;">--</div>
+            <div id="map-loader" class="loader-container" style="min-height:50px;"><div class="spinner"></div></div>
+        </div>
+        
+        <div>
+            <h3 style="margin-bottom:1rem;">Map Legend</h3>
+            <div class="legend-box" style="flex-direction: row; flex-wrap: wrap; gap: 1.5rem;">
+                <div class="legend-item">
+                    <div class="legend-color" style="background:#10b981;"></div>
+                    <div>Good (0-50)</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background:#eab308;"></div>
+                    <div>Moderate (51-100)</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background:#f97316;"></div>
+                    <div>Poor (101-200)</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background:#ef4444;"></div>
+                    <div>Very Poor (201-300)</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background:#9f1239;"></div>
+                    <div>Severe (301+)</div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top:auto;">
+            <p style="font-size:0.8rem; color:var(--text-muted);"><i class="fa-solid fa-circle-info"></i> Click on any city marker to view detailed pollutant metrics and health advice.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const CITY_COORDS = {
+    'Delhi': [28.7041, 77.1025], 'Mumbai': [19.0760, 72.8777], 'Bangalore': [12.9716, 77.5946],
+    'Kolkata': [22.5726, 88.3639], 'Chennai': [13.0827, 80.2707], 'Hyderabad': [17.3850, 78.4867],
+    'Pune': [18.5204, 73.8567], 'Ahmedabad': [23.0225, 72.5714], 'Surat': [21.1702, 72.8311],
+    'Noida': [28.5355, 77.3910], 'Gurugram': [28.4595, 77.0266]
+};
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // Init Map (Dark Theme tiles)
+    const map = L.map('india-map').setView([22.9, 78.9], 5);
+    
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+    }).addTo(map);
+
+    let cityData = [];
+    
+    // Fetch all cities in parallel using the bulk API
+    const bulkRes = await fetch(`/api/pollution_bulk?cities=${INDIAN_CITIES.join(',')}`);
+    const bulkData = await bulkRes.json();
+    
+    if (Array.isArray(bulkData)) {
+        bulkData.forEach(item => {
+            if (item.data) {
+                const aqi = calculateProxyAqi(item.data);
+                const lat = item.lat;
+                const lon = item.lon;
+                
+                if (lat && lon) {
+                    cityData.push({ city: item.city, aqi, lat, lon, comps: item.data });
+                }
+            }
+        });
+    }
+    
+    document.getElementById('map-loader').style.display = 'none';
+    
+    if(cityData.length > 0) {
+        cityData.sort((a,b) => b.aqi - a.aqi);
+        const worst = cityData[0];
+        const worstEl = document.getElementById('map-worst');
+        worstEl.style.display = 'inline-block';
+        worstEl.innerHTML = `<i class="fa-solid fa-location-dot"></i> ${worst.city} - AQI ${worst.aqi}`;
+        
+        cityData.forEach(item => {
+            const info = getAqiInfo(item.aqi);
+            
+            const markerHtml = `
+                <div style="display:flex; flex-direction:column; align-items:center;" class="animated-marker">
+                    <div style="
+                        background-color: ${info.colorHex};
+                        width: 14px; height: 14px;
+                        border-radius: 50%;
+                        border: 2px solid white;
+                        box-shadow: 0 0 10px ${info.colorHex};
+                    "></div>
+                    <div style="background:rgba(15, 23, 42, 0.9); color:white; padding:3px 6px; border-radius:6px; font-size:11px; margin-top:4px; white-space:nowrap; border:1px solid rgba(255,255,255,0.1); font-weight: 500;">
+                        ${item.city} <span style="color:${info.colorHex}; font-weight:bold; margin-left:2px;">${item.aqi}</span>
+                    </div>
+                </div>
+            `;
+            
+            const customIcon = L.divIcon({
+                html: markerHtml,
+                className: '',
+                iconSize: [20, 30],
+                iconAnchor: [10, 10]
+            });
+            
+            const popupContent = `
+                <div style="padding:5px; color:#333; font-family:'Outfit',sans-serif;">
+                    <h3 style="margin-bottom:5px; color:#111;">${item.city}</h3>
+                    <div style="font-weight:bold; color:${info.colorHex}; margin-bottom:5px;">AQI: ${item.aqi} (${info.label})</div>
+                    <hr style="margin:5px 0;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; font-size:12px;">
+                        <div>PM2.5: <b>${item.comps.pm2_5.toFixed(1)}</b></div>
+                        <div>PM10: <b>${item.comps.pm10.toFixed(1)}</b></div>
+                        <div>NO2: <b>${item.comps.no2.toFixed(1)}</b></div>
+                        <div>SO2: <b>${item.comps.so2.toFixed(1)}</b></div>
+                    </div>
+                </div>
+            `;
+            
+            L.marker([item.lat, item.lon], {icon: customIcon})
+                .addTo(map)
+                .bindPopup(popupContent, {closeButton: false})
+                .on('mouseover', function(e) { this.openPopup(); })
+                .on('mouseout', function(e) { this.closePopup(); });
+        });
+    }
+});
+</script>
+{% endblock %}

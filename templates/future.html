@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Future AQI Prediction{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="col-span-12 card glass-panel" style="margin-bottom:2rem;">
+        <h3 style="margin-bottom:1rem;">Select City for Forecast</h3>
+        <p style="color:var(--text-secondary); margin-bottom:1.5rem;">Select a city to predict its air quality for tomorrow using our Machine Learning model trained on live API data.</p>
+        <div style="display:flex; gap:1rem; max-width:500px;">
+            <select id="future-city" class="input-control">
+                <option value="">-- Select a city --</option>
+            </select>
+            <button id="forecast-btn" class="btn"><i class="fa-solid fa-cloud-sun"></i> Forecast Tomorrow</button>
+        </div>
+    </div>
+    
+    <div id="forecast-result" class="col-span-12" style="display:none;">
+        <div class="dashboard-grid" style="margin-bottom:0;">
+            <!-- Current vs Future Cards -->
+            <div class="col-span-4 card glass-panel" style="text-align:center;">
+                <h4 style="margin-bottom:1rem; color:var(--text-secondary);">Current (Today)</h4>
+                <div id="curr-aqi" style="font-size: 4rem; font-weight:700; line-height:1;">--</div>
+                <div id="curr-status" class="badge" style="margin-top:1rem; margin-bottom:1rem;">--</div>
+            </div>
+            
+            <div class="col-span-4 card glass-panel" style="text-align:center; position:relative; overflow:hidden;">
+                <div style="position:absolute; top:-20px; right:-20px; background:var(--accent-1); color:white; padding:30px 40px 10px 20px; transform:rotate(45deg); font-weight:bold; font-size:0.8rem;">PREDICTION</div>
+                <h4 style="margin-bottom:1rem; color:var(--accent-1);">Forecast (Tomorrow)</h4>
+                <div id="fut-aqi" style="font-size: 4rem; font-weight:700; line-height:1;">--</div>
+                <div id="fut-status" class="badge" style="margin-top:1rem; margin-bottom:1rem;">--</div>
+            </div>
+            
+            <div class="col-span-4 card glass-panel" style="display:flex; flex-direction:column; justify-content:center;">
+                <h4 style="margin-bottom:1rem;">Trend Implication</h4>
+                <div id="trend-icon" style="font-size:4rem; text-align:center; margin-bottom:1rem;"></div>
+                <p id="trend-msg" style="text-align:center; font-weight:500;"></p>
+            </div>
+            
+            <!-- Trend Chart -->
+            <div class="col-span-12 card glass-panel" style="margin-top:2rem;">
+                <h3 style="margin-bottom:1rem;">Pollutant Trend Analysis</h3>
+                <div class="chart-container large">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('future-city');
+    INDIAN_CITIES.forEach(city => {
+        const opt = document.createElement('option');
+        opt.value = city; opt.textContent = city;
+        sel.appendChild(opt);
+    });
+    
+    let chartInstance = null;
+    Chart.defaults.color = '#94a3b8';
+    
+    document.getElementById('forecast-btn').addEventListener('click', async () => {
+        const city = sel.value;
+        if(!city) return alert("Please select a city");
+        
+        const btn = document.getElementById('forecast-btn');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+        
+        try {
+            const res = await fetch(`/api/predict_future?city=${city}`);
+            const data = await res.json();
+            
+            if(data.current_aqi && data.future_aqi) {
+                document.getElementById('forecast-result').style.display = 'block';
+                
+                const currInfo = getAqiInfo(data.current_aqi);
+                const futInfo = getAqiInfo(data.future_aqi);
+                
+                // Current
+                document.getElementById('curr-aqi').textContent = data.current_aqi;
+                document.getElementById('curr-aqi').className = currInfo.colorClass;
+                document.getElementById('curr-status').textContent = currInfo.label;
+                document.getElementById('curr-status').className = `badge ${currInfo.bgClass}`;
+                
+                // Future
+                document.getElementById('fut-aqi').textContent = data.future_aqi;
+                document.getElementById('fut-aqi').className = futInfo.colorClass;
+                document.getElementById('fut-status').textContent = futInfo.label;
+                document.getElementById('fut-status').className = `badge ${futInfo.bgClass}`;
+                
+                // Trend
+                const diff = data.future_aqi - data.current_aqi;
+                const trendIcon = document.getElementById('trend-icon');
+                const trendMsg = document.getElementById('trend-msg');
+                
+                if(diff > 10) {
+                    trendIcon.innerHTML = `<i class="fa-solid fa-arrow-trend-up text-vpoor"></i>`;
+                    trendMsg.textContent = "Air quality is expected to worsen tomorrow. Take precautions.";
+                } else if(diff < -10) {
+                    trendIcon.innerHTML = `<i class="fa-solid fa-arrow-trend-down text-good"></i>`;
+                    trendMsg.textContent = "Air quality is expected to improve tomorrow.";
+                } else {
+                    trendIcon.innerHTML = `<i class="fa-solid fa-minus text-moderate"></i>`;
+                    trendMsg.textContent = "Air quality is expected to remain relatively stable.";
+                }
+                
+                // Chart
+                if(chartInstance) chartInstance.destroy();
+                
+                const ctx = document.getElementById('trendChart');
+                
+                const labels = ['PM2.5', 'PM10', 'NO2', 'SO2', 'O3'];
+                const currData = [data.current_components.pm2_5, data.current_components.pm10, data.current_components.no2, data.current_components.so2, data.current_components.o3];
+                const futData = [data.future_components.pm2_5, data.future_components.pm10, data.future_components.no2, data.future_components.so2, data.future_components.o3];
+                
+                chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Today',
+                                data: currData,
+                                borderColor: 'rgba(56, 189, 248, 1)',
+                                backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Tomorrow (Predicted)',
+                                data: futData,
+                                borderColor: 'rgba(234, 179, 8, 1)',
+                                backgroundColor: 'transparent',
+                                borderDash: [5, 5],
+                                tension: 0.4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { grid: { color: 'rgba(255,255,255,0.05)' } },
+                            x: { grid: { color: 'rgba(255,255,255,0.05)' } }
+                        }
+                    }
+                });
+            }
+        } catch(e) {
+            console.error(e);
+        } finally {
+            btn.innerHTML = '<i class="fa-solid fa-cloud-sun"></i> Forecast Tomorrow';
+        }
+    });
+});
+</script>
+{% endblock %}
