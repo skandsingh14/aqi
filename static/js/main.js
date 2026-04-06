@@ -1,12 +1,8 @@
 const INDIAN_CITIES = [
     'Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune', 'Ahmedabad', 'Jaipur',
     'Lucknow', 'Chandigarh', 'Bhopal', 'Patna', 'Noida', 'Gurgaon', 'Kanpur', 'Ghaziabad', 'Agra',
-    'Varanasi', 'New Delhi', 'Dwarka', 'Rohini', 'Faridabad', 'Panipat', 'Ludhiana', 'Amritsar',
-    'Udaipur', 'Jodhpur', 'Kota', 'Nagpur', 'Nashik', 'Surat', 'Vadodara', 'Rajkot', 'Panaji', 'Margao',
-    'Mysore', 'Hubli', 'Coimbatore', 'Madurai', 'Warangal', 'Visakhapatnam', 'Vijayawada', 'Kochi',
-    'Thiruvananthapuram', 'Howrah', 'Gaya', 'Bhubaneswar', 'Cuttack', 'Ranchi', 'Jamshedpur', 'Indore',
-    'Gwalior', 'Raipur', 'Bhilai', 'Leh', 'Srinagar', 'Port Blair', 'Shimla', 'Amaravati', 'Itanagar', 
-    'Imphal', 'Shillong', 'Aizawl', 'Kohima', 'Gangtok', 'Agartala', 'Dehradun', 'Puducherry'
+    'Varanasi', 'New Delhi', 'Faridabad', 'Amritsar', 'Nagpur', 'Surat', 'Vadodara', 'Indore', 
+    'Bhubaneswar', 'Ranchi', 'Raipur', 'Srinagar', 'Shimla', 'Dehradun', 'Kochi', 'Visakhapatnam', 'Puducherry'
 ];
 
 // Helper to get AQI category and color class based on the Indian AQI rules or general approximation
