@@ -154,7 +154,12 @@ def fetch_pollution_data(city):
     now = time.time()
     # Cache for 1 hour (3600 seconds)
     if city in pollution_cache and (now - pollution_cache[city]['timestamp'] < 3600):
-        return pollution_cache[city]['data']
+        data = pollution_cache[city]['data']
+        # If the cached data was created before we added the 'source' field, 
+        # it will be missing. Let's ensure it has a default if we're certain keys are OK.
+        if 'source' not in data:
+            data['source'] = 'live' if openweathermap_api_key else 'mock'
+        return data
 
     if not openweathermap_api_key:
         data = get_mock_city_data(city)
