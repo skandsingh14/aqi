@@ -174,10 +174,14 @@ def fetch_pollution_data(city):
             lat, lon = geo_data[0]['lat'], geo_data[0]['lon']
             ap_url = f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={openweathermap_api_key}"
             ap_response = requests.get(ap_url, timeout=5)
+            # Add debug printing to see the real error from OpenWeather
+            if ap_response.status_code != 200:
+                print(f"OpenWeather Error for {city}: {ap_response.status_code} - {ap_response.text}")
+            
             ap_data = ap_response.json()
             res = {'city': city, 'lat': lat, 'lon': lon, 'data': ap_data['list'][0]['components'], 'source': 'live'}
         except Exception as e:
-            print(f"Error for {city}: {e}")
+            print(f"Critical Error for {city}: {str(e)}")
             data = get_mock_city_data(city)
             f_lat, f_lon = REAL_COORDS.get(city, (20.0, 78.0))
             res = {'city': city, 'lat': f_lat, 'lon': f_lon, 'data': data['list'][0]['components'], 'source': 'mock_error'}
