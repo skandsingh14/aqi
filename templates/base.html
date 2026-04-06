@@ -46,8 +46,8 @@
                 <div class="page-title">
                     <h1>{% block page_title %}Dashboard{% endblock %}</h1>
                 </div>
-                <div class="user-info glass-panel small-glass">
-                    <span class="live-indicator"><span class="dot pulse"></span> Live Data API</span>
+                <div class="user-info glass-panel small-glass" id="api-status-wrapper">
+                    <span class="live-indicator"><span class="dot pulse" id="api-status-dot"></span> <span id="api-status-text">Connecting...</span></span>
                 </div>
             </header>
             

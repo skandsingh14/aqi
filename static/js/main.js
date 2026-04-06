@@ -18,6 +18,25 @@ function getAqiInfo(aqi) {
     return { label: 'Severe', colorClass: 'text-severe', bgClass: 'bg-severe', colorHex: '#9f1239' };
 }
 
+// Global helper to update topbar API status
+function updateapiStatus(source) {
+    const text = document.getElementById('api-status-text');
+    const dot = document.getElementById('api-status-dot');
+    const wrapper = document.getElementById('api-status-wrapper');
+    
+    if (!text || !dot) return;
+    
+    if (source === 'live') {
+        text.innerText = 'Live API Data';
+        dot.style.backgroundColor = '#10b981';
+        wrapper.classList.remove('status-mock');
+    } else {
+        text.innerText = 'Mock Data (API Offline)';
+        dot.style.backgroundColor = '#eab308';
+        wrapper.classList.add('status-mock');
+    }
+}
+
 // Dynamically add staggered animations to all panel cards on load
 document.addEventListener("DOMContentLoaded", () => {
     const cards = document.querySelectorAll('.card, .glass-panel');

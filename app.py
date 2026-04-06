@@ -80,12 +80,12 @@ def get_mock_city_data(city):
     return {
         'list': [{
             'components': {
-                'pm2_5': random.uniform(10, 250),
-                'pm10': random.uniform(20, 300),
-                'no2': random.uniform(10, 100),
-                'so2': random.uniform(5, 50),
-                'co': random.uniform(200, 1500) / 1000.0, # in mg/m3 roughly
-                'o3': random.uniform(20, 150)
+                'pm2_5': random.uniform(15, 60),  # Much more normal range (15-60)
+                'pm10': random.uniform(30, 100),  # Much more normal range (30-100)
+                'no2': random.uniform(10, 40),
+                'so2': random.uniform(5, 20),
+                'co': random.uniform(400, 800) / 1000.0, 
+                'o3': random.uniform(20, 60)
             }
         }]
     }
@@ -159,7 +159,7 @@ def fetch_pollution_data(city):
     if not openweathermap_api_key:
         data = get_mock_city_data(city)
         lat, lon = REAL_COORDS.get(city, (20.0, 78.0))
-        res = {'city': city, 'lat': lat, 'lon': lon, 'data': data['list'][0]['components']}
+        res = {'city': city, 'lat': lat, 'lon': lon, 'data': data['list'][0]['components'], 'source': 'mock'}
     else:
         try:
             geo_url = f"http://api.openweathermap.org/geo/1.0/direct?q={city},IN&limit=1&appid={openweathermap_api_key}"
@@ -170,12 +170,12 @@ def fetch_pollution_data(city):
             ap_url = f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={openweathermap_api_key}"
             ap_response = requests.get(ap_url, timeout=5)
             ap_data = ap_response.json()
-            res = {'city': city, 'lat': lat, 'lon': lon, 'data': ap_data['list'][0]['components']}
+            res = {'city': city, 'lat': lat, 'lon': lon, 'data': ap_data['list'][0]['components'], 'source': 'live'}
         except Exception as e:
             print(f"Error for {city}: {e}")
             data = get_mock_city_data(city)
             f_lat, f_lon = REAL_COORDS.get(city, (20.0, 78.0))
-            res = {'city': city, 'lat': f_lat, 'lon': f_lon, 'data': data['list'][0]['components']}
+            res = {'city': city, 'lat': f_lat, 'lon': f_lon, 'data': data['list'][0]['components'], 'source': 'mock_error'}
     
     pollution_cache[city] = {'timestamp': now, 'data': res}
     save_cache(pollution_cache)
