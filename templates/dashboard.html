@@ -68,10 +68,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     let aqiChartInstance = null;
     let pieChartInstance = null;
     
-    // ✅ ONLY CITY NAME FUNCTION
+    // ✅ ONLY CITY NAME FUNCTION (REFINED)
     function getCityName(fullName){
         if(!fullName) return 'Unknown';
-        return fullName.split('-')[0].split(',')[0].trim();
+        const cities = ['Delhi','Mumbai','Bangalore','Chennai','Kolkata','Hyderabad','Pune','Ahmedabad','Jaipur','Lucknow','Ahmedabad','Gurgaon','Noida','Ghaziabad'];
+        // Check if any major city name is within the full string
+        for(let city of cities) {
+            if(fullName.toLowerCase().includes(city.toLowerCase())) return city;
+        }
+        // Fallback: use first part if no match
+        return fullName.split(',')[0].trim();
     }
 
     async function loadDashboardData() {
