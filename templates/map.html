@@ -104,29 +104,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             // Populate worstStations for overlay logic
-            worstStations = [...cityData].sort((a,b) => b.aqi - a.aqi).slice(0, 5);
+            if (cityData.length > 0) {
+                worstStations = [...cityData].sort((a,b) => b.aqi - a.aqi).slice(0, 5);
+            }
             
             renderMarkers();
         } catch(e) { 
-            console.error("Map fetch error", e); 
+            console.error("Map Core Load Error:", e); 
             if (typeof updateapiStatus === 'function') updateapiStatus('mock');
         } finally {
             document.getElementById('map-loader').style.display = 'none';
-            document.getElementById('map-worst').style.display = 'block';
+            document.getElementById('map-worst').style.display = (cityData.length > 0) ? 'block' : 'none';
         }
     }
 
     function renderMarkers() {
-        if(cityData.length === 0) return;
+        if (!cityData || cityData.length === 0) return;
         
-        // Pick the top 10 worst stations across all discoveries
-        // --- Metropolitan Priority Alert ---
+        // Pick the top worst station for the metropolitan priority alert
         const worstText = document.getElementById('worst-text');
-        if (worstStations.length > 0) worstText.textContent = `${worstStations[0].city}`;
+        if (worstStations && worstStations.length > 0) {
+            worstText.textContent = `${worstStations[0].city}`;
+        }
         
         cityData.forEach(item => {
+            if (!item.lat || !item.lon) return;
+
             const info = getAqiInfo(item.aqi);
-            const station = item.city.split(',')[0];
+            // Safety check for location naming
+            const stationDisplayName = item.city ? item.city.split(',')[0].trim() : "Unknown Station";
 
             const markerHtml = `
                 <div style="display:flex; flex-direction:column; align-items:center;" class="animated-marker">

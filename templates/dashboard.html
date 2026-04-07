@@ -94,8 +94,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Group by City and pick the MAX AQI for 'Max Value' analytics
                 const cityGroups = {};
                 bulkData.forEach(item => {
-                    if (item && item.data) {
-                        const cityKey = (item.city && item.city.includes(',')) ? item.city.split(',').slice(-1)[0].trim() : (item.city || 'Unknown');
+                    if (item && item.data && item.city) {
+                        const cityKey = item.city.split(',')[0].trim();
                         const aqi = calculateProxyAqi(item.data);
                         if (!cityGroups[cityKey] || aqi > cityGroups[cityKey].aqi) {
                             cityGroups[cityKey] = { city: item.city, aqi, comps: item.data };
@@ -105,23 +105,38 @@ document.addEventListener('DOMContentLoaded', async () => {
                 citiesData = Object.values(cityGroups);
                 
                 // Analytics aggregation
-                citiesData.forEach(item => {
-                    avgPollutants.pm2_5 += (item.comps.pm2_5 || 0);
-                    avgPollutants.pm10 += (item.comps.pm10 || 0);
-                    avgPollutants.no2 += (item.comps.no2 || 0);
-                    avgPollutants.so2 += (item.comps.so2 || 0);
-                    avgPollutants.o3 += (item.comps.o3 || 0);
-                });
+                if (citiesData.length > 0) {
+                    citiesData.forEach(item => {
+                        avgPollutants.pm2_5 += (item.comps.pm2_5 || 0);
+                        avgPollutants.pm10 += (item.comps.pm10 || 0);
+                        avgPollutants.no2 += (item.comps.no2 || 0);
+                        avgPollutants.so2 += (item.comps.so2 || 0);
+                        avgPollutants.co += (item.comps.co || 0);
+                        avgPollutants.o3 += (item.comps.o3 || 0);
+                    });
+                    const count = citiesData.length;
+                    Object.keys(avgPollutants).forEach(key => avgPollutants[key] /= count);
+                }
             } else {
-                if (typeof updateapiStatus === 'function') updateapiStatus('mock');
+                throw new Error("No bulk data returned");
             }
         } catch(e) { 
-            console.error("Sync Error", e);
+            console.error("Dashboard Sync Error:", e);
             if (typeof updateapiStatus === 'function') updateapiStatus('mock');
+        } finally { 
+            loader.style.display = 'none'; 
         }
-        finally { loader.style.display = 'none'; }
         
-        if(citiesData.length === 0) return;
+        if (citiesData.length === 0) {
+            document.getElementById('dashboard-container').innerHTML = `
+                <div class="col-span-12 glass hover-lift" style="text-align:center; padding:6rem;">
+                    <div style="font-size:4rem; margin-bottom:1.5rem; opacity:0.3;"><i class="fa-solid fa-satellite-dish"></i></div>
+                    <h2 style="color:var(--text-mid)">Atmospheric Sync in Progress</h2>
+                    <p style="color:var(--text-low); margin-top:1rem;">We are currently fetching high-precision area data. Please refresh in a moment.</p>
+                </div>`;
+            return;
+        }
+
         citiesData.sort((a,b) => b.aqi - a.aqi);
         
         // --- Render Executive Cards (Top 3) ---
