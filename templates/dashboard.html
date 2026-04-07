@@ -1,48 +1,3 @@
-{% extends 'base.html' %}
-
-{% block page_title %}Analytics Dashboard{% endblock %}
-
-{% block content %}
-<div class="dashboard-grid fade-in" id="executive-grid"></div>
-
-<div class="dashboard-grid fade-in" style="margin-top: 4rem;">
-    
-    <div class="col-span-8 glass" style="padding: 3rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3rem;">
-            <div>
-                <h3 class="gradient-text" style="margin:0; font-size:1.8rem;">Regional Intelligence Map</h3>
-                <p style="color:var(--text-low); margin-top:0.5rem;">Cross-station AQI comparison</p>
-            </div>
-            <button class="btn" id="refresh-btn">
-                <i class="fa-solid fa-rotate"></i> Sync Live
-            </button>
-        </div>
-
-        <div id="chart-loader" class="loader-container" style="height:400px;display:flex;">
-            <div class="spinner"></div>
-        </div>
-
-        <div id="bar-chart-wrapper" style="height:400px;display:none;">
-            <canvas id="aqiBarChart"></canvas>
-        </div>
-    </div>
-
-    <div class="col-span-4 glass" style="padding:3rem;">
-        <h3 style="margin-bottom:2rem;">Pollutant Mix</h3>
-        <div style="height:320px;">
-            <canvas id="pollutantPieChart"></canvas>
-        </div>
-    </div>
-
-    <div class="col-span-12 glass" style="padding:4rem;">
-        <h2 class="gradient-text">National Priority Index</h2>
-        <div id="ranking-list"></div>
-    </div>
-
-</div>
-{% endblock %}
-
-{% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -57,9 +12,12 @@ const execGrid = document.getElementById('executive-grid');
 let aqiChartInstance = null;
 let pieChartInstance = null;
 
-function getCityName(name){
-return name.split(',')[0].split('-')[0].trim();
+
+// ✅ ONLY CITY NAME FUNCTION
+function getCityName(fullName){
+return fullName.split('-')[0].split(',')[0].trim();
 }
+
 
 async function loadDashboardData(){
 
@@ -84,20 +42,15 @@ const cities=[
 const res=await fetch(`/api/pollution/bulk?cities=${cities.join(',')}`);
 const data=await res.json();
 
-const cityGroups={};
-
 data.forEach(item=>{
 if(!item || !item.data) return;
 
-const city=getCityName(item.city);
-const aqi=calculateProxyAqi(item.data);
-
-if(!cityGroups[city] || aqi>cityGroups[city].aqi){
-cityGroups[city]={city,aqi,comps:item.data};
-}
+citiesData.push({
+city:getCityName(item.city),   // ✅ ONLY CITY
+aqi:calculateProxyAqi(item.data),
+comps:item.data
 });
-
-citiesData=Object.values(cityGroups);
+});
 
 citiesData.forEach(i=>{
 avgPollutants.pm2_5+=i.comps.pm2_5||0;
@@ -120,6 +73,8 @@ loader.style.display='none';
 
 citiesData.sort((a,b)=>b.aqi-a.aqi);
 
+
+// ✅ TOP 3 CARDS
 citiesData.slice(0,3).forEach((item,i)=>{
 
 const info=getAqiInfo(item.aqi);
@@ -141,6 +96,8 @@ execGrid.appendChild(card);
 
 });
 
+
+// ✅ RANKING LIST
 citiesData.forEach((item,index)=>{
 
 const info=getAqiInfo(item.aqi);
@@ -163,12 +120,14 @@ rankingList.appendChild(div);
 
 });
 
+
+// ✅ BAR CHART
 barWrapper.style.display='block';
 
 aqiChartInstance=new Chart(aqiCanvas,{
 type:'bar',
 data:{
-labels:citiesData.map(d=>d.city),
+labels:citiesData.map(d=>d.city), // only city
 datasets:[{
 data:citiesData.map(d=>d.aqi),
 backgroundColor:'#6366f1'
@@ -180,6 +139,8 @@ maintainAspectRatio:false
 }
 });
 
+
+// ✅ PIE CHART
 pieChartInstance=new Chart(pieCanvas,{
 type:'doughnut',
 data:{
@@ -213,4 +174,3 @@ if(!document.hidden) loadDashboardData();
 
 });
 </script>
-{% endblock %}
