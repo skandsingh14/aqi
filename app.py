@@ -185,7 +185,7 @@ def fetch_pollution_data(city):
                     'aqi': d.get('aqi', 0) # NEW: Include AQI here for the frontend
                 }
                 res = {
-                    'city': city,
+                    'city': d.get('city', {}).get('name', city), # NEW: Use Official Station Name
                     'lat': lat,
                     'lon': lon,
                     'data': comps,
@@ -225,6 +225,42 @@ def fetch_pollution_data(city):
     pollution_cache[city] = {'timestamp': now, 'data': res}
     save_cache(pollution_cache)
     return res
+
+@app.route('/api/pollution/nearest')
+def api_pollution_nearest():
+    lat = request.args.get('lat')
+    lon = request.args.get('lon')
+    if not (lat and lon) or not aqicn_token:
+        return jsonify({'error': 'Missing coordinates or AQICN token'}), 400
+        
+    try:
+        url = f"https://api.waqi.info/feed/geo:{lat};{lon}/?token={aqicn_token}"
+        data = requests.get(url, timeout=5).json()
+        if data.get('status') == 'ok':
+            d = data['data']
+            iaqi = d.get('iaqi', {})
+            geo = d.get('city', {}).get('geo', [])
+            comps = {
+                'pm2_5': iaqi.get('pm25', {}).get('v', 0),
+                'pm10': iaqi.get('pm10', {}).get('v', 0),
+                'no2': iaqi.get('no2', {}).get('v', 0),
+                'so2': iaqi.get('so2', {}).get('v', 0),
+                'co': iaqi.get('co', {}).get('v', 0) * 1000, 
+                'o3': iaqi.get('o3', {}).get('v', 0),
+                'aqi': d.get('aqi', 0)
+            }
+            res = {
+                'city': d.get('city', {}).get('name', 'Nearest Station'),
+                'lat': geo[0] if len(geo) >= 2 else float(lat),
+                'lon': geo[1] if len(geo) >= 2 else float(lon),
+                'data': comps,
+                'aqi': d.get('aqi', 0),
+                'source': 'live'
+            }
+            return jsonify(res)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify({'error': 'Failed to find nearest station'}), 404
 
 @app.route('/api/pollution')
 def api_pollution():

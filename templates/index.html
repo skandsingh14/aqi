@@ -12,6 +12,35 @@
 <div class="hero-section glass-panel">
     <h1 class="hero-title gradient-text">India Air Quality Prediction System</h1>
     <p class="hero-subtitle">Real-time monitoring, advanced machine learning predictions, and comprehensive health analytics for major Indian cities.</p>
+
+    <!-- Search Section (RESTORED & IMPROVED) -->
+    <div class="search-area" style="max-width: 600px; margin: 2rem auto 0;">
+        <div class="input-wrapper" style="position:relative; display:flex; gap:0.5rem;">
+            <input type="text" id="city-input" placeholder="Search a city or station..." style="flex:1; padding:1rem 1rem 1rem 3rem; border-radius:12px; border:none; background:rgba(255,255,255,0.05); color:white;">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:1rem; top:50%; transform:translateY(-50%); color:var(--text-muted);"></i>
+            <button id="search-btn" class="btn" style="padding:0 1.5rem;">Search</button>
+            <button id="geo-btn" class="btn" title="Find nearest station" style="background:var(--accent-primary); width:50px; padding:0; display:flex; justify-content:center; align-items:center;">
+                <i class="fa-solid fa-location-crosshairs"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Search Result Display -->
+<div id="result-container" class="card glass-panel" style="display:none; margin-bottom:2rem; border:1px solid rgba(255,255,255,0.1);">
+    <div class="result-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+        <div>
+            <h2 id="result-city-name" class="gradient-text" style="margin:0;">City Name</h2>
+            <p id="result-station-info" style="font-size:0.8rem; color:var(--text-muted); margin-top:0.2rem;">Official Tracking Station</p>
+        </div>
+        <div id="result-aqi-badge" class="badge">--</div>
+    </div>
+    <div style="display:flex; justify-content:center;">
+        <div id="result-aqi-circle" class="aqi-circle" style="width:120px; height:120px; font-size:2rem;">
+            <span class="aqi-value">--</span>
+            <span class="aqi-label">AQI</span>
+        </div>
+    </div>
 </div>
 
 <div class="dashboard-grid">
@@ -173,6 +202,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
         listContainer.innerHTML = '<p>Failed to load data. Please check backend.</p>';
     }
+
+    // --- Search & GPS Logic (NEW) ---
+    const cityInput = document.getElementById('city-input');
+    const searchBtn = document.getElementById('search-btn');
+    const geoBtn = document.getElementById('geo-btn');
+    const resultContainer = document.getElementById('result-container');
+    const cityNameEl = document.getElementById('result-city-name');
+    const aqiCircle = document.getElementById('result-aqi-circle');
+    const aqiValEl = aqiCircle.querySelector('.aqi-value');
+    const stationInfo = document.getElementById('result-station-info');
+    const aqiBadge = document.getElementById('result-aqi-badge');
+
+    async function showSingleResult(data) {
+        if (!data || !data.data) return;
+        const aqi = calculateProxyAqi(data.data);
+        const info = getAqiInfo(aqi);
+        
+        cityNameEl.textContent = data.city;
+        stationInfo.textContent = "Official Station: " + (data.city.split(',')[0] || "Live Source");
+        aqiValEl.textContent = Math.floor(aqi);
+        aqiCircle.style.backgroundColor = info.colorHex;
+        aqiBadge.textContent = info.label;
+        aqiBadge.className = `badge ${info.bgClass}`;
+        
+        resultContainer.style.display = 'block';
+        resultContainer.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    searchBtn.addEventListener('click', async () => {
+        const city = cityInput.value.trim();
+        if (!city) return;
+        const res = await fetch(`/api/pollution?city=${city}`);
+        const data = await res.json();
+        showSingleResult(data);
+    });
+
+    geoBtn.addEventListener('click', () => {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser");
+            return;
+        }
+        geoBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            const { latitude, longitude } = pos.coords;
+            try {
+                const res = await fetch(`/api/pollution/nearest?lat=${latitude}&lon=${longitude}`);
+                const data = await res.json();
+                showSingleResult(data);
+            } catch (err) {
+                alert("Error finding local station. Using fallback.");
+            } finally {
+                geoBtn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i>';
+            }
+        }, () => {
+            alert("Please enable location services to find your local station.");
+            geoBtn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i>';
+        });
+    });
 });
 </script>
 {% endblock %}
