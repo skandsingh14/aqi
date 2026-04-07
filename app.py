@@ -42,9 +42,18 @@ if combined_keys and (not openweathermap_api_key or not aqicn_token):
         if not aqicn_token: aqicn_token = keys[0]
         if not openweathermap_api_key: openweathermap_api_key = keys[0]
 
-# Log for the user
-api_source = "AQICN (Station)" if aqicn_token else ("OpenWeather (Satellite)" if openweathermap_api_key else "NONE")
-print(f"Server Initialized | Data Source: {api_source} | News API: {'OK' if news_api_key else 'MISSING'}")
+# Log for the user (visible in Render logs)
+if aqicn_token:
+    api_source = "✅ AQICN (Station Data)"
+elif openweathermap_api_key:
+    api_source = "⚡ OpenWeather (Satellite Data)"
+else:
+    api_source = "❌ NONE (Using Mock Data)"
+
+print(f"--------------------------------------------------")
+print(f"Server Initialized | Data Source: {api_source}")
+print(f"News API: {'✅ OK' if news_api_key else '❌ MISSING'}")
+print(f"--------------------------------------------------")
 
 REAL_COORDS = {
     'Delhi': (28.7041, 77.1025), 'Mumbai': (19.0760, 72.8777), 'Bangalore': (12.9716, 77.5946),
