@@ -88,13 +88,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const searchRes = await fetch(`/api/pollution/search?city=${city}`);
                     const searchData = await searchRes.json();
                     searchData.forEach(item => {
-                        if(item.data && item.lat) {
+                        if(item.aqi && item.lat) {
                              if (item.source === 'live') hasLive = true;
-                             const aqi = calculateProxyAqi(item.data);
-                             cityData.push({ city: item.city, aqi, lat: item.lat, lon: item.lon, comps: item.data });
+                             cityData.push({ city: item.city, aqi: item.aqi, lat: item.lat, lon: item.lon, comps: {} });
                         }
                     });
-                } catch(e) { console.error(`Search failed for ${city}`, e); }
+                } catch(e) { console.error(`Discovery fail for ${city}`, e); }
             });
             
             await Promise.all(searchPromises);
@@ -110,7 +109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             renderMarkers();
         } catch(e) { 
-            console.error("Map Core Load Error:", e); 
+            console.error("Map Synchronization Fail", e); 
             if (typeof updateapiStatus === 'function') updateapiStatus('mock');
         } finally {
             document.getElementById('map-loader').style.display = 'none';

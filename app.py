@@ -294,21 +294,30 @@ def api_pollution_bulk():
 def api_pollution_search():
     city = request.args.get('city', 'Delhi')
     if not aqicn_token:
-        # Fallback to single result if no token
         return jsonify([fetch_pollution_data(city)])
         
     try:
         url = f"https://api.waqi.info/search/?keyword={city}&token={aqicn_token}"
-        data = requests.get(url, timeout=10).json()
-        if data.get('status') == 'ok':
-            stations = data['data']
-            # We fetch full details for top 5 stations to keep it snappy
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                # Use a specific list of station IDs or names
-                results = [fetch_pollution_data(s['station']['name']) for s in stations[:8]]
-            return jsonify([r for r in results if r and r.get('source') == 'live'])
+        resp = requests.get(url, timeout=10).json()
+        if resp.get('status') == 'ok':
+            stations = resp['data']
+            results = []
+            for s in stations[:10]: # Top 10 per city
+                aqi_val = s.get('aqi')
+                # Only include valid numerical AQI results
+                if aqi_val and aqi_val.isdigit():
+                    geo = s.get('station', {}).get('geo', [])
+                    if len(geo) == 2:
+                        results.append({
+                            'city': s['station']['name'],
+                            'lat': geo[0],
+                            'lon': geo[1],
+                            'aqi': int(aqi_val),
+                            'source': 'live'
+                        })
+            return jsonify(results)
     except Exception as e:
-        print(f"Search API Error: {e}")
+        print(f"Discovery Error: {e}")
         
     return jsonify([fetch_pollution_data(city)])
 
