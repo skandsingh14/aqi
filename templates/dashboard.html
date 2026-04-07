@@ -2,34 +2,46 @@
 
 {% block page_title %}Analytics Dashboard{% endblock %}
 
-{% block content %}
-<div class="dashboard-grid">
-    <div class="col-span-12 card glass-panel">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3>Live AQI Comparison (Major Cities)</h3>
-            <button class="btn btn-outline" id="refresh-btn"><i class="fa-solid fa-rotate"></i> Refresh Data</button>
-        </div>
-        <div id="chart-loader" class="loader-container"><div class="spinner"></div></div>
-        <div class="chart-container large">
-            <canvas id="aqiBarChart" style="display:none;"></canvas>
+<!-- Executive Overview Grid -->
+<div class="dashboard-grid fade-in" id="executive-grid">
+    <!-- City Cards will be injected here -->
+</div>
+
+<!-- Charts Section -->
+<div class="dashboard-grid fade-in" style="margin-top: 3rem;">
+    <div class="col-span-12 glass">
+        <div style="padding: 2.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+                <h3 class="gradient-text" style="margin:0; font-size:1.5rem;">Regional AQI Comparison</h3>
+                <button class="btn btn-outline" id="refresh-btn" style="height:44px; padding:0 1.25rem;">
+                    <i class="fa-solid fa-rotate"></i> Sync Data
+                </button>
+            </div>
+            <div id="chart-loader" class="loader-container" style="height: 350px;"><div class="spinner"></div></div>
+            <div class="chart-container">
+                <canvas id="aqiBarChart"></canvas>
+            </div>
         </div>
     </div>
     
-    <div class="col-span-6 card glass-panel">
-        <h3 style="margin-bottom:1rem;">Pollutant Breakdown (Average)</h3>
-        <div class="chart-container">
-            <canvas id="pollutantPieChart" style="display:none;"></canvas>
+    <div class="col-span-6 glass">
+        <div style="padding: 2.5rem;">
+            <h3 style="margin-bottom:2rem;">National Pollutant Mix</h3>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="pollutantPieChart"></canvas>
+            </div>
         </div>
     </div>
     
-    <div class="col-span-6 card glass-panel">
-        <h3 style="margin-bottom:1rem;">Top Polluted Cities Ranking</h3>
-        <ul id="ranking-list" class="city-list">
-            <!-- Populated by JS -->
-        </ul>
+    <div class="col-span-6 glass">
+        <div style="padding: 2.5rem;">
+            <h3 style="margin-bottom:2rem;">Top Polluted Priority List</h3>
+            <ul id="ranking-list" class="nav-links">
+                <!-- Populated by JS -->
+            </ul>
+        </div>
     </div>
 </div>
-{% endblock %}
 
 {% block extra_scripts %}
 <script>
@@ -39,18 +51,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const aqiCanvas = document.getElementById('aqiBarChart');
     const pieCanvas = document.getElementById('pollutantPieChart');
     const rankingList = document.getElementById('ranking-list');
+    const execGrid = document.getElementById('executive-grid');
     
     let aqiChartInstance = null;
     let pieChartInstance = null;
     
-    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.color = 'rgba(255,255,255,0.4)';
     Chart.defaults.font.family = "'Outfit', sans-serif";
+    Chart.defaults.font.size = 12;
 
     async function loadDashboardData() {
         loader.style.display = 'flex';
         aqiCanvas.style.display = 'none';
         pieCanvas.style.display = 'none';
         rankingList.innerHTML = '';
+        execGrid.innerHTML = '';
         
         if (aqiChartInstance) aqiChartInstance.destroy();
         if (pieChartInstance) pieChartInstance.destroy();
@@ -58,43 +73,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         let citiesData = [];
         let avgPollutants = { pm2_5:0, pm10:0, no2:0, so2:0, o3:0 };
         
-        // Fetch all city data in one request to avoid sequential latency
-        const bulkRes = await fetch(`/api/pollution_bulk?cities=${INDIAN_CITIES.join(',')}`);
-        const bulkData = await bulkRes.json();
-        if (Array.isArray(bulkData) && bulkData.length > 0) {
-            // Check if ANY city in the response is live
-            const hasLiveData = bulkData.some(item => item.source === 'live');
-            if (typeof updateapiStatus === 'function') updateapiStatus(hasLiveData ? 'live' : 'mock');
+        try {
+            const bulkRes = await fetch(`/api/pollution_bulk?cities=${INDIAN_CITIES.join(',')}`);
+            const bulkData = await bulkRes.json();
             
-            bulkData.forEach(item => {
-                if (item.data) {
-                    const aqi = calculateProxyAqi(item.data);
-                    citiesData.push({ city: item.city, aqi, comps: item.data });
-                    avgPollutants.pm2_5 += item.data.pm2_5;
-                    avgPollutants.pm10 += item.data.pm10;
-                    avgPollutants.no2 += item.data.no2;
-                    avgPollutants.so2 += item.data.so2;
-                    avgPollutants.o3 += item.data.o3;
-                }
-            });
-        }
+            if (Array.isArray(bulkData) && bulkData.length > 0) {
+                const hasLiveData = bulkData.some(item => item.source === 'live');
+                if (typeof updateapiStatus === 'function') updateapiStatus(hasLiveData ? 'live' : 'mock');
+                
+                bulkData.forEach(item => {
+                    if (item.data) {
+                        const aqi = calculateProxyAqi(item.data);
+                        citiesData.push({ city: item.city, aqi, comps: item.data });
+                        avgPollutants.pm2_5 += item.data.pm2_5;
+                        avgPollutants.pm10 += item.data.pm10;
+                        avgPollutants.no2 += item.data.no2;
+                        avgPollutants.so2 += item.data.so2;
+                        avgPollutants.o3 += item.data.o3;
+                    }
+                });
+            }
+        } catch(e) { console.error("Data fetch error", e); }
         
         if(citiesData.length === 0) return;
         
-        // Sort for ranking
+        // Sort
         citiesData.sort((a,b) => b.aqi - a.aqi);
         
+        // Render Executive Cards (Top 3)
+        citiesData.slice(0, 3).forEach(item => {
+            const info = getAqiInfo(item.aqi);
+            const card = document.createElement('div');
+            card.className = 'city-exec-card glass';
+            const station = item.city.split(',')[0];
+            const cityName = item.city.split(',').length > 1 ? item.city.split(',').slice(1).join(',') : item.city;
+
+            card.innerHTML = `
+                <div class="city-name">${cityName}</div>
+                <div class="station-name">${station} Station</div>
+                <div class="aqi-large-glow" style="color:${info.colorHex}; text-shadow: 0 0 20px ${info.colorHex}40">
+                    ${Math.floor(item.aqi)}
+                </div>
+                <div style="margin-top:1.5rem">
+                    <span class="badge ${info.bgClass}">${info.label}</span>
+                </div>
+            `;
+            execGrid.appendChild(card);
+        });
+
         // Render Ranking list
         citiesData.slice(0, 5).forEach((item, index) => {
             const info = getAqiInfo(item.aqi);
             const li = document.createElement('li');
-            li.className = 'city-list-item';
+            li.style.display = 'flex';
+            li.style.justifyContent = 'space-between';
+            li.style.alignItems = 'center';
+            li.style.padding = '0.75rem 0';
+            li.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
             li.innerHTML = `
-                <div class="city-name">
-                    <span style="display:inline-block; width:24px; height:24px; background:rgba(255,255,255,0.1); border-radius:50%; text-align:center; line-height:24px;">${index+1}</span>
-                    ${item.city}
+                <div style="font-weight:600; color:var(--text-high)">
+                    <span style="color:var(--text-low); margin-right:0.5rem">#${index+1}</span>
+                    ${item.city.split(',').slice(-1)[0].trim()}
                 </div>
-                <div class="badge ${info.bgClass}">AQI: ${item.aqi}</div>
+                <div class="badge ${info.bgClass}" style="min-width:100px; text-align:center">${item.aqi}</div>
             `;
             rankingList.appendChild(li);
         });
@@ -108,15 +149,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         aqiCanvas.style.display = 'block';
         pieCanvas.style.display = 'block';
         
+        // Bar Chart
         aqiChartInstance = new Chart(aqiCanvas, {
             type: 'bar',
             data: {
-                labels: labels,
+                labels: citiesData.map(d => d.city.split(',').slice(-1)[0].trim()),
                 datasets: [{
-                    label: 'Live AQI',
-                    data: aqiValues,
-                    backgroundColor: bgColors,
-                    borderRadius: 6
+                    data: citiesData.map(d => d.aqi),
+                    backgroundColor: citiesData.map(d => getAqiInfo(d.aqi).colorHex + 'dd'),
+                    borderRadius: 12,
+                    barThickness: 24
                 }]
             },
             options: {
@@ -124,13 +166,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: true, max: 500, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { beginAtZero: true, max: 500, grid: { color: 'rgba(255,255,255,0.03)' } },
                     x: { grid: { display: false } }
                 }
             }
         });
         
-        // Render Pie Chart
+        // Pie Chart
         const n = citiesData.length;
         pieChartInstance = new Chart(pieCanvas, {
             type: 'doughnut',
@@ -144,27 +186,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                         avgPollutants.so2/n, 
                         avgPollutants.o3/n
                     ],
-                    backgroundColor: ['#38bdf8', '#818cf8', '#f472b6', '#34d399', '#fbbf24'],
-                    borderWidth: 0
+                    backgroundColor: ['#6366f1', '#0ea5e9', '#f472b6', '#10b981', '#f59e0b'],
+                    borderWidth: 0,
+                    hoverOffset: 15
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'right' }
+                    legend: { position: 'right', labels: { usePointStyle: true, padding: 20 } }
                 },
-                cutout: '70%'
+                cutout: '75%'
             }
         });
     }
     
     refreshBtn.addEventListener('click', loadDashboardData);
-    
-    // Initial load
     loadDashboardData();
-    
-    // Auto refresh every 5 mins
     setInterval(loadDashboardData, 5 * 60 * 1000);
 });
 </script>

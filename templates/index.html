@@ -3,114 +3,86 @@
 {% block page_title %}Home Overview{% endblock %}
 
 {% block content %}
-<div class="ticker-wrap">
+<div class="ticker-wrap glass" style="border-radius:0; border-left:none; border-right:none; background:rgba(2,6,23,0.9);">
     <div class="ticker-content" id="live-ticker">
-        <span class="ticker-item"><i class="fa-solid fa-satellite-dish pulse"></i> Fetching live sensors...</span>
+        <span class="ticker-item"><i class="fa-solid fa-satellite-dish pulse"></i> Syncing global monitoring stations...</span>
     </div>
 </div>
 
-<div class="hero-section glass-panel">
-    <h1 class="hero-title gradient-text">India Air Quality Prediction System</h1>
-    <p class="hero-subtitle">Real-time monitoring, advanced machine learning predictions, and comprehensive health analytics for major Indian cities.</p>
+<div class="hero-section glass" style="margin-top:2rem; padding:4rem 2.5rem; text-align:center;">
+    <h1 class="hero-title gradient-text" style="font-size:3.5rem; font-weight:900; letter-spacing:-2px;">National Air Quality Intelligence</h1>
+    <p class="hero-subtitle" style="font-size:1.1rem; color:var(--text-mid); max-width:700px; margin:1rem auto 0;">Real-time station monitoring, AI-driven health forecasting, and hyper-local atmospheric data for 2026.</p>
 
-    <!-- Search Section (RESTORED & IMPROVED) -->
-    <div class="search-area" style="max-width: 600px; margin: 2rem auto 0;">
-        <div class="input-wrapper" style="position:relative; display:flex; gap:0.5rem;">
-            <input type="text" id="city-input" placeholder="Search a city or station..." style="flex:1; padding:1rem 1rem 1rem 3rem; border-radius:12px; border:none; background:rgba(255,255,255,0.05); color:white;">
-            <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:1rem; top:50%; transform:translateY(-50%); color:var(--text-muted);"></i>
-            <button id="search-btn" class="btn" style="padding:0 1.5rem;">Search</button>
-            <button id="geo-btn" class="btn" title="Find nearest station" style="background:var(--accent-primary); width:50px; padding:0; display:flex; justify-content:center; align-items:center;">
+    <!-- Search Section -->
+    <div class="search-area" style="max-width: 600px; margin: 3rem auto 0;">
+        <div class="input-wrapper">
+            <input type="text" id="city-input" class="input-control" placeholder="Search a city or street-level station..." style="padding-left:3.5rem; height:56px;">
+            <i class="fa-solid fa-magnifying-glass search-icon" style="left:1.5rem; font-size:1.1rem;"></i>
+            <button id="search-btn" class="btn" style="height:56px; border-radius:14px;">Analyze</button>
+            <button id="geo-btn" class="btn" title="Detect local station" style="background:var(--accent-primary); width:56px; padding:0; height:56px; border-radius:14px;">
                 <i class="fa-solid fa-location-crosshairs"></i>
             </button>
         </div>
     </div>
 </div>
 
-<!-- Search Result Display -->
-<div id="result-container" class="card glass-panel" style="display:none; margin-bottom:2rem; border:1px solid rgba(255,255,255,0.1);">
-    <div class="result-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+<!-- Search Result Display (Executive Style) -->
+<div id="result-container" class="city-exec-card glass fade-in" style="display:none; margin: 2rem 0; width:100%;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         <div>
-            <h2 id="result-city-name" class="gradient-text" style="margin:0;">City Name</h2>
-            <p id="result-station-info" style="font-size:0.8rem; color:var(--text-muted); margin-top:0.2rem;">Official Tracking Station</p>
+            <h2 id="result-city-name" class="city-name" style="margin:0; font-size:2.5rem;">City Name</h2>
+            <p id="result-station-info" class="station-name">Official Monitoring Source</p>
         </div>
         <div id="result-aqi-badge" class="badge">--</div>
     </div>
-    <div style="display:flex; justify-content:center;">
-        <div id="result-aqi-circle" class="aqi-circle" style="width:120px; height:120px; font-size:2rem;">
-            <span class="aqi-value">--</span>
-            <span class="aqi-label">AQI</span>
-        </div>
+    
+    <div style="display:flex; justify-content:center; margin:2rem 0;">
+        <div id="result-aqi-circle" class="aqi-large-glow" style="font-size:8rem;">--</div>
+    </div>
+
+    <div style="grid-template-columns: repeat(4, 1fr); display:grid; gap:1.5rem; border-top:1px solid rgba(255,255,255,0.05); padding-top:2rem;">
+        <div style="text-align:center;"><div style="color:var(--text-low); font-size:0.7rem; text-transform:uppercase;">PM2.5</div><div id="res-pm25" style="font-weight:700; font-size:1.2rem;">--</div></div>
+        <div style="text-align:center;"><div style="color:var(--text-low); font-size:0.7rem; text-transform:uppercase;">PM10</div><div id="res-pm10" style="font-weight:700; font-size:1.2rem;">--</div></div>
+        <div style="text-align:center;"><div style="color:var(--text-low); font-size:0.7rem; text-transform:uppercase;">NO2</div><div id="res-no2" style="font-weight:700; font-size:1.2rem;">--</div></div>
+        <div style="text-align:center;"><div style="color:var(--text-low); font-size:0.7rem; text-transform:uppercase;">CO</div><div id="res-co" style="font-weight:700; font-size:1.2rem;">--</div></div>
     </div>
 </div>
 
-<div class="dashboard-grid">
+<div class="dashboard-grid" style="margin-top:3rem;">
     <!-- Top Stats -->
-    <div class="col-span-4 card glass-panel stat-card">
-        <div class="stat-header">
-            <h3>Avg AQI (Major Cities)</h3>
-            <i class="fa-solid fa-cloud"></i>
+    <div class="col-span-4 glass" style="padding:2rem;">
+        <div style="display:flex; justify-content:space-between; color:var(--text-low); margin-bottom:1rem;">
+            <h5 style="text-transform:uppercase; letter-spacing:1px; font-size:0.75rem;">Network Average</h5>
+            <i class="fa-solid fa-chart-line"></i>
         </div>
-        <div>
-            <div id="avg-aqi" class="stat-value">--</div>
-            <div id="avg-status" class="badge bg-moderate">Loading...</div>
-        </div>
+        <div id="avg-aqi" style="font-size:3.5rem; font-weight:800; line-height:1;">--</div>
+        <div id="avg-status" class="badge" style="margin-top:1rem; display:inline-block;">Loading...</div>
     </div>
     
-    <div class="col-span-4 card glass-panel stat-card">
-        <div class="stat-header">
-            <h3>Most Polluted City</h3>
-            <i class="fa-solid fa-triangle-exclamation text-severe"></i>
+    <div class="col-span-4 glass" style="padding:2rem;">
+        <div style="display:flex; justify-content:space-between; color:var(--text-low); margin-bottom:1rem;">
+            <h5 style="text-transform:uppercase; letter-spacing:1px; font-size:0.75rem;">Critical Alert</h5>
+            <i class="fa-solid fa-triangle-exclamation"></i>
         </div>
-        <div>
-            <div id="worst-city" class="stat-value" style="font-size: 2rem;">--</div>
-            <div class="stat-label">AQI: <span id="worst-aqi" class="text-severe font-bold">--</span></div>
-        </div>
+        <div id="worst-city" style="font-size:1.5rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">--</div>
+        <div style="color: #fb7185; font-weight:700; margin-top:0.5rem;">AQI <span id="worst-aqi">--</span></div>
     </div>
     
-    <div class="col-span-4 card glass-panel stat-card">
-        <div class="stat-header">
-            <h3>Least Polluted City</h3>
-            <i class="fa-solid fa-leaf text-good"></i>
+    <div class="col-span-4 glass" style="padding:2rem;">
+        <div style="display:flex; justify-content:space-between; color:var(--text-low); margin-bottom:1rem;">
+            <h5 style="text-transform:uppercase; letter-spacing:1px; font-size:0.75rem;">Regional Best</h5>
+            <i class="fa-solid fa-leaf"></i>
         </div>
-        <div>
-            <div id="best-city" class="stat-value" style="font-size: 2rem;">--</div>
-            <div class="stat-label">AQI: <span id="best-aqi" class="text-good font-bold">--</span></div>
-        </div>
+        <div id="best-city" style="font-size:1.5rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">--</div>
+        <div style="color: var(--aqi-good); font-weight:700; margin-top:0.5rem;">AQI <span id="best-aqi">--</span></div>
     </div>
 
-    <!-- Live City List -->
-    <div class="col-span-8 card glass-panel">
-        <h3 style="margin-bottom: 1.5rem;">Live AQI Overview</h3>
-        <div id="home-loader" class="loader-container"><div class="spinner"></div></div>
-        <ul id="live-cities-list" class="city-list" style="display:none;">
+    <!-- Live Overview -->
+    <div class="col-span-12 glass" style="padding:2.5rem;">
+        <h3 style="margin-bottom: 2rem; font-size:1.5rem;">Monitored Priority Zones</h3>
+        <div id="home-loader" class="loader-container" style="height:100px;"><div class="spinner"></div></div>
+        <div id="live-cities-list" style="display:none; flex-direction:column; gap:0.75rem;">
             <!-- Rendered by JS -->
-        </ul>
-    </div>
-
-    <!-- Legend -->
-    <div class="col-span-4 card glass-panel">
-        <h3 style="margin-bottom: 1.5rem;">AQI Legend</h3>
-        <div class="legend-box">
-            <div class="legend-item">
-                <div class="legend-color" style="background:#10b981;"></div>
-                <div><strong>0-50:</strong> Good (Green)</div>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background:#eab308;"></div>
-                <div><strong>51-100:</strong> Moderate (Yellow)</div>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background:#f97316;"></div>
-                <div><strong>101-200:</strong> Poor (Orange)</div>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background:#ef4444;"></div>
-                <div><strong>201-300:</strong> Very Poor (Red)</div>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background:#9f1239;"></div>
-                <div><strong>301+:</strong> Severe (Maroon)</div>
-            </div>
         </div>
     </div>
 </div>
@@ -148,69 +120,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     listContainer.style.display = 'flex';
     
     if (cityData.length > 0) {
-        // --- Populate the Infinite Scrolling Marquee Ticker ---
+        // --- Populate Ticker ---
         const ticker = document.getElementById('live-ticker');
         ticker.innerHTML = '';
-        // Duplicate multiple cycles to ensure seamless scrolling width
-        for(let loop = 0; loop < 3; loop++) {
+        for(let loop = 0; loop < 2; loop++) {
             cityData.forEach(item => {
                 const info = getAqiInfo(item.aqi);
-                ticker.innerHTML += `<span class="ticker-item" style="margin-right:2rem;"><i class="fa-solid fa-cloud ${info.colorClass}" style="margin-right:0.3rem;"></i> ${item.city}: <span class="${info.colorClass}">${item.aqi}</span></span>`;
+                ticker.innerHTML += `<span class="ticker-item" style="color:var(--text-high);"><i class="fa-solid fa-circle" style="font-size:0.5rem; color:${info.colorHex}"></i> ${item.city.split(',').slice(-1)[0]}: ${Math.floor(item.aqi)}</span>`;
             });
         }
 
-        // --- Sort worst to best for Main UI ---
+        // --- Streamlined City List ---
         cityData.sort((a,b) => b.aqi - a.aqi);
-        
         let totalAqi = 0;
+        const displayList = cityData.slice(0, 8);
         
-        // Take top 6 for the list
-        const displayList = cityData.slice(0, 6);
         displayList.forEach(item => {
             totalAqi += item.aqi;
             const info = getAqiInfo(item.aqi);
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.alignItems = 'center';
+            div.style.padding = '1rem 0';
+            div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
             
-            const li = document.createElement('li');
-            li.className = 'city-list-item';
-            li.innerHTML = `
-                <div class="city-name"><i class="fa-solid fa-location-dot ${info.colorClass}"></i> ${item.city}</div>
-                <div style="display:flex; gap: 1rem; align-items:center;">
-                    <div class="badge ${info.bgClass}" style="box-shadow: 0 0 15px ${info.colorHex}40;">AQI: ${item.aqi} - ${info.label}</div>
+            div.innerHTML = `
+                <div style="font-weight:600; color:var(--text-high);">
+                    <i class="fa-solid fa-location-dot" style="color:var(--text-low); margin-right:0.75rem; font-size:0.8rem;"></i>
+                    ${item.city.split(',').slice(-1)[0]}
                 </div>
+                <div class="badge ${info.bgClass}">${item.aqi} • ${info.label}</div>
             `;
-            listContainer.appendChild(li);
+            listContainer.appendChild(div);
         });
         
-        // Update stats
+        // Update Stats
         const avg = Math.floor(totalAqi / displayList.length);
         const avgInfo = getAqiInfo(avg);
         document.getElementById('avg-aqi').textContent = avg;
-        document.getElementById('avg-aqi').className = `stat-value ${avgInfo.colorClass}`;
+        document.getElementById('avg-aqi').style.color = avgInfo.colorHex;
         document.getElementById('avg-status').textContent = avgInfo.label;
         document.getElementById('avg-status').className = `badge ${avgInfo.bgClass}`;
-        document.getElementById('avg-status').style.boxShadow = `0 0 15px ${avgInfo.colorHex}40`;
         
         const worst = cityData[0];
         const best = cityData[cityData.length - 1];
-        
-        document.getElementById('worst-city').textContent = worst.city;
-        document.getElementById('worst-aqi').textContent = worst.aqi;
-        
-        document.getElementById('best-city').textContent = best.city;
-        document.getElementById('best-aqi').textContent = best.aqi;
+        document.getElementById('worst-city').textContent = worst.city.split(',').slice(-1)[0];
+        document.getElementById('worst-aqi').textContent = Math.floor(worst.aqi);
+        document.getElementById('best-city').textContent = best.city.split(',').slice(-1)[0];
+        document.getElementById('best-aqi').textContent = Math.floor(best.aqi);
         
     } else {
-        listContainer.innerHTML = '<p>Failed to load data. Please check backend.</p>';
+        listContainer.innerHTML = '<p>Failed to sync monitored zones.</p>';
     }
 
-    // --- Search & GPS Logic (NEW) ---
+    // --- Search & GPS Logic (PRO) ---
     const cityInput = document.getElementById('city-input');
     const searchBtn = document.getElementById('search-btn');
     const geoBtn = document.getElementById('geo-btn');
     const resultContainer = document.getElementById('result-container');
     const cityNameEl = document.getElementById('result-city-name');
     const aqiCircle = document.getElementById('result-aqi-circle');
-    const aqiValEl = aqiCircle.querySelector('.aqi-value');
     const stationInfo = document.getElementById('result-station-info');
     const aqiBadge = document.getElementById('result-aqi-badge');
 
@@ -219,12 +189,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         const aqi = calculateProxyAqi(data.data);
         const info = getAqiInfo(aqi);
         
-        cityNameEl.textContent = data.city;
-        stationInfo.textContent = "Official Station: " + (data.city.split(',')[0] || "Live Source");
-        aqiValEl.textContent = Math.floor(aqi);
-        aqiCircle.style.backgroundColor = info.colorHex;
+        cityNameEl.textContent = data.city.split(',').length > 1 ? data.city.split(',').slice(1).join(',') : data.city;
+        stationInfo.textContent = (data.city.split(',')[0] || "Live Source") + " Tracking Station";
+        aqiCircle.textContent = Math.floor(aqi);
+        aqiCircle.style.color = info.colorHex;
+        aqiCircle.style.textShadow = `0 0 50px ${info.colorHex}40`;
         aqiBadge.textContent = info.label;
         aqiBadge.className = `badge ${info.bgClass}`;
+
+        // Detailed Pollutants
+        document.getElementById('res-pm25').textContent = data.data.pm2_5.toFixed(1);
+        document.getElementById('res-pm10').textContent = data.data.pm10.toFixed(1);
+        document.getElementById('res-no2').textContent = data.data.no2.toFixed(1);
+        document.getElementById('res-co').textContent = data.data.co.toFixed(1);
         
         resultContainer.style.display = 'block';
         resultContainer.scrollIntoView({ behavior: 'smooth' });
@@ -233,16 +210,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     searchBtn.addEventListener('click', async () => {
         const city = cityInput.value.trim();
         if (!city) return;
-        const res = await fetch(`/api/pollution?city=${city}`);
-        const data = await res.json();
-        showSingleResult(data);
+        searchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            const res = await fetch(`/api/pollution?city=${city}`);
+            const data = await res.json();
+            showSingleResult(data);
+        } finally { searchBtn.textContent = 'Analyze'; }
     });
 
     geoBtn.addEventListener('click', () => {
-        if (!navigator.geolocation) {
-            alert("Geolocation is not supported by your browser");
-            return;
-        }
+        if (!navigator.geolocation) return;
         geoBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         navigator.geolocation.getCurrentPosition(async (pos) => {
             const { latitude, longitude } = pos.coords;
@@ -250,15 +227,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const res = await fetch(`/api/pollution/nearest?lat=${latitude}&lon=${longitude}`);
                 const data = await res.json();
                 showSingleResult(data);
-            } catch (err) {
-                alert("Error finding local station. Using fallback.");
-            } finally {
-                geoBtn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i>';
-            }
-        }, () => {
-            alert("Please enable location services to find your local station.");
-            geoBtn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i>';
-        });
+            } finally { geoBtn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i>'; }
+        }, () => { geoBtn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i>'; });
     });
 });
 </script>
