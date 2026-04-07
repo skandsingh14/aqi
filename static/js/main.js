@@ -114,16 +114,6 @@ function calculateProxyAqi(comps) {
         else return 400 + (x - 430) * 100 / 80;
     }
 
-    function calc_pm10(x) {
-        if (!x) return 0;
-        if (x <= 50) return x;
-        else if (x <= 100) return x;
-        else if (x <= 250) return 100 + (x - 100) * 100 / 150;
-        else if (x <= 350) return 200 + (x - 250) * 100 / 100;
-        else if (x <= 430) return 300 + (x - 350) * 100 / 80;
-        else return 400 + (x - 430) * 100 / 80;
-    }
-
     function calc_no2(x) {
         if (!x) return 0;
         if (x <= 40) return x * 50 / 40;

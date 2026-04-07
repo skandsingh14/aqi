@@ -63,37 +63,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1. Fetch High-Density Station Data for Big Cities
     const bigCities = ['Delhi', 'Mumbai', 'Bangalore', 'Kolkata', 'Chennai', 'Hyderabad'];
     const otherCities = INDIAN_CITIES.filter(c => !bigCities.includes(c));
+    let cityData = [];
+    let worstStations = [];
 
     async function loadMapData() {
         try {
             // First, load all 'other' cities normally
             const bulkRes = await fetch(`/api/pollution/bulk?cities=${otherCities.join(',')}`);
             const bulkData = await bulkRes.json();
+            
+            let hasLive = false;
+            
             bulkData.forEach(item => {
                 if(item.data && item.lat) {
+                    if (item.source === 'live') hasLive = true;
                     const aqi = calculateProxyAqi(item.data);
                     cityData.push({ city: item.city, aqi, lat: item.lat, lon: item.lon, comps: item.data });
                 }
             });
 
-            // Second, deep-search BIG CITIES for 'all places'
-            for(let city of bigCities) {
+            // Second, deep-search BIG CITIES in parallel for better performance
+            const searchPromises = bigCities.map(async (city) => {
                 try {
                     const searchRes = await fetch(`/api/pollution/search?city=${city}`);
                     const searchData = await searchRes.json();
                     searchData.forEach(item => {
                         if(item.data && item.lat) {
+                             if (item.source === 'live') hasLive = true;
                              const aqi = calculateProxyAqi(item.data);
                              cityData.push({ city: item.city, aqi, lat: item.lat, lon: item.lon, comps: item.data });
                         }
                     });
                 } catch(e) { console.error(`Search failed for ${city}`, e); }
+            });
+            
+            await Promise.all(searchPromises);
+            
+            if (typeof updateapiStatus === 'function') {
+                updateapiStatus(hasLive ? 'live' : (cityData.length > 0 ? 'mock' : 'connecting'));
             }
             
+            // Populate worstStations for overlay logic
+            worstStations = [...cityData].sort((a,b) => b.aqi - a.aqi).slice(0, 5);
+            
             renderMarkers();
-        } catch(e) { console.error("Map fetch error", e); }
-        document.getElementById('map-loader').style.display = 'none';
-        document.getElementById('map-worst').style.display = 'block';
+        } catch(e) { 
+            console.error("Map fetch error", e); 
+            if (typeof updateapiStatus === 'function') updateapiStatus('mock');
+        } finally {
+            document.getElementById('map-loader').style.display = 'none';
+            document.getElementById('map-worst').style.display = 'block';
+        }
     }
 
     function renderMarkers() {

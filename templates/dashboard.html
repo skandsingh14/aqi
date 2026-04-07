@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const cityGroups = {};
                 bulkData.forEach(item => {
                     if (item && item.data) {
-                        const cityKey = item.city.split(',').slice(-1)[0].trim();
+                        const cityKey = (item.city && item.city.includes(',')) ? item.city.split(',').slice(-1)[0].trim() : (item.city || 'Unknown');
                         const aqi = calculateProxyAqi(item.data);
                         if (!cityGroups[cityKey] || aqi > cityGroups[cityKey].aqi) {
                             cityGroups[cityKey] = { city: item.city, aqi, comps: item.data };
@@ -112,8 +112,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     avgPollutants.so2 += (item.comps.so2 || 0);
                     avgPollutants.o3 += (item.comps.o3 || 0);
                 });
+            } else {
+                if (typeof updateapiStatus === 'function') updateapiStatus('mock');
             }
-        } catch(e) { console.error("Sync Error", e); }
+        } catch(e) { 
+            console.error("Sync Error", e);
+            if (typeof updateapiStatus === 'function') updateapiStatus('mock');
+        }
         finally { loader.style.display = 'none'; }
         
         if(citiesData.length === 0) return;
