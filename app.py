@@ -26,19 +26,16 @@ except Exception as e:
     model = None
     print(f"Error loading model: {e}")
 
-# --- API KEY INITIALIZATION ---
-# 1. First, check for professional individual keys
-aqicn_token = os.getenv("AQICN_TOKEN", "")  # NEW: Official Station Data
-openweathermap_api_key = os.getenv("OPENWEATHER_API_KEY", "")
+# 1. Look for keys (We now check BOTH names for flexibility)
+aqicn_token = os.getenv("AQICN_TOKEN") or os.getenv("OPENWEATHER_API_KEY", "")
+openweathermap_api_key = os.getenv("OPENWEATHER_API_KEY") or os.getenv("AQICN_TOKEN", "")
 news_api_key = os.getenv("NEWS_API_KEY", "")
 
-# 2. If missing, look for a combined string (fallback)
+# 2. Check for combined strings (Comma-separated)
 combined_keys = os.getenv("API_KEYS") or os.getenv("AQI_API_KEY")
-
-if combined_keys and (not openweathermap_api_key or not aqicn_token):
+if combined_keys:
     keys = [k.strip() for k in combined_keys.split(",")]
     if len(keys) >= 1:
-        # If the user only has ONE key, we try it as AQICN first, then OpenWeather
         if not aqicn_token: aqicn_token = keys[0]
         if not openweathermap_api_key: openweathermap_api_key = keys[0]
 
