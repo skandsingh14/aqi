@@ -74,7 +74,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         let avgPollutants = { pm2_5:0, pm10:0, no2:0, so2:0, o3:0 };
         
         try {
-            const bulkRes = await fetch(`/api/pollution_bulk?cities=${INDIAN_CITIES.join(',')}`);
+            // Limit cities for dashboard performance
+            const monitoredCities = typeof INDIAN_CITIES !== 'undefined' ? INDIAN_CITIES.slice(0, 10) : ['Delhi', 'Mumbai', 'Bangalore', 'Chennai'];
+            const bulkRes = await fetch(`/api/pollution_bulk?cities=${monitoredCities.join(',')}`);
             const bulkData = await bulkRes.json();
             
             if (Array.isArray(bulkData) && bulkData.length > 0) {
@@ -82,20 +84,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (typeof updateapiStatus === 'function') updateapiStatus(hasLiveData ? 'live' : 'mock');
                 
                 bulkData.forEach(item => {
-                    if (item.data) {
+                    if (item && item.data) {
                         const aqi = calculateProxyAqi(item.data);
                         citiesData.push({ city: item.city, aqi, comps: item.data });
                         avgPollutants.pm2_5 += item.data.pm2_5;
                         avgPollutants.pm10 += item.data.pm10;
                         avgPollutants.no2 += item.data.no2;
                         avgPollutants.so2 += item.data.so2;
-                        avgPollutants.o3 += item.data.o3;
+                        avgPollutants.o3 += (item.data.o3 || 0);
                     }
                 });
             }
-        } catch(e) { console.error("Data fetch error", e); }
+        } catch(e) { 
+            console.error("Dashboard Sync Error", e); 
+            execGrid.innerHTML = `<div class="col-span-12 glass" style="padding:2rem; text-align:center; color:var(--text-low);">Live monitoring sync paused. Please refresh.</div>`;
+        }
         
-        if(citiesData.length === 0) return;
+        if(citiesData.length === 0) {
+            loader.style.display = 'none';
+            return;
+        }
         
         // Sort
         citiesData.sort((a,b) => b.aqi - a.aqi);
@@ -103,14 +111,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Render Executive Cards (Top 3)
         citiesData.slice(0, 3).forEach(item => {
             const info = getAqiInfo(item.aqi);
+            const loc = formatLocation(item.city);
             const card = document.createElement('div');
             card.className = 'city-exec-card glass';
-            const station = item.city.split(',')[0];
-            const cityName = item.city.split(',').length > 1 ? item.city.split(',').slice(1).join(',') : item.city;
 
             card.innerHTML = `
-                <div class="city-name">${cityName}</div>
-                <div class="station-name">${station} Station</div>
+                <div class="city-name">${loc.main}</div>
+                <div class="station-name">${loc.sub}</div>
                 <div class="aqi-large-glow" style="color:${info.colorHex}; text-shadow: 0 0 20px ${info.colorHex}40">
                     ${Math.floor(item.aqi)}
                 </div>
@@ -122,28 +129,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         // Render Ranking list
-        citiesData.slice(0, 5).forEach((item, index) => {
+        citiesData.slice(0, 6).forEach((item, index) => {
             const info = getAqiInfo(item.aqi);
+            const loc = formatLocation(item.city);
             const li = document.createElement('li');
             li.style.display = 'flex';
             li.style.justifyContent = 'space-between';
             li.style.alignItems = 'center';
-            li.style.padding = '0.75rem 0';
+            li.style.padding = '1.25rem 0';
             li.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
             li.innerHTML = `
-                <div style="font-weight:600; color:var(--text-high)">
-                    <span style="color:var(--text-low); margin-right:0.5rem">#${index+1}</span>
-                    ${item.city.split(',').slice(-1)[0].trim()}
+                <div style="font-weight:600; color:var(--text-high); display:flex; gap:0.75rem; align-items:center;">
+                    <span style="color:var(--text-low); font-size:0.8rem; min-width:24px;">#${index+1}</span>
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-size:1.05rem;">${loc.main}</span>
+                        <span style="font-size:0.75rem; font-weight:400; color:var(--text-low);">${loc.sub}</span>
+                    </div>
                 </div>
-                <div class="badge ${info.bgClass}" style="min-width:100px; text-align:center">${item.aqi}</div>
+                <div class="badge ${info.bgClass}" style="min-width:120px; text-align:center">${item.aqi}</div>
             `;
             rankingList.appendChild(li);
         });
-        
-        // Render Bar Chart
-        const labels = citiesData.map(d => d.city);
-        const aqiValues = citiesData.map(d => d.aqi);
-        const bgColors = citiesData.map(d => getAqiInfo(d.aqi).colorHex);
         
         loader.style.display = 'none';
         aqiCanvas.style.display = 'block';
@@ -153,7 +159,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         aqiChartInstance = new Chart(aqiCanvas, {
             type: 'bar',
             data: {
-                labels: citiesData.map(d => d.city.split(',').slice(-1)[0].trim()),
+                labels: citiesData.map(d => formatLocation(d.city).main),
                 datasets: [{
                     data: citiesData.map(d => d.aqi),
                     backgroundColor: citiesData.map(d => getAqiInfo(d.aqi).colorHex + 'dd'),

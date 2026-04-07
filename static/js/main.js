@@ -23,14 +23,35 @@ function updateapiStatus(source) {
     if (!text || !dot) return;
     
     if (source === 'live') {
-        text.innerText = 'Live API Data';
+        text.innerText = 'Live Connectivity';
         dot.style.backgroundColor = '#10b981';
-        wrapper.classList.remove('status-mock');
-    } else {
-        text.innerText = 'Mock Data (API Offline)';
+        dot.style.boxShadow = '0 0 10px #10b981';
+        wrapper.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+    } else if (source === 'mock') {
+        text.innerText = 'Local Station Data';
         dot.style.backgroundColor = '#eab308';
-        wrapper.classList.add('status-mock');
+        dot.style.boxShadow = '0 0 10px #eab308';
+        wrapper.style.borderColor = 'rgba(234, 179, 8, 0.2)';
+    } else {
+        text.innerText = 'Connecting...';
+        dot.style.backgroundColor = '#64748b';
+        dot.style.boxShadow = 'none';
     }
+}
+
+// Logic to fix the "India, India" naming bug
+function formatLocation(fullString) {
+    if (!fullString) return { main: 'Unknown', sub: 'Monitoring Station' };
+    const parts = fullString.split(',').map(p => p.trim());
+    
+    if (parts.length === 1) return { main: parts[0], sub: 'Direct Source' };
+    if (parts.length === 2) return { main: parts[0], sub: parts[1] };
+    
+    // For "Area, City, Country" -> Main: "Area", Sub: "City, Country"
+    return {
+        main: parts[0],
+        sub: parts.slice(1).join(', ')
+    };
 }
 
 // Dynamically add staggered animations to all panel cards on load

@@ -3,101 +3,113 @@
 {% block page_title %}AQI Prediction Using ML{% endblock %}
 
 {% block content %}
-<div class="dashboard-grid">
-    <div class="col-span-12 card glass-panel" style="margin-bottom: 2rem;">
-        <h3 style="margin-bottom:1rem;">Live City Auto-Fill</h3>
-        <p style="color:var(--text-secondary); margin-bottom:1.5rem;">Select a city to automatically fetch live pollutant data, or enter custom values manually to predict AQI.</p>
-        <div class="input-group" style="max-width:400px;">
-            <label>Select City</label>
-            <select id="city-select" class="input-control">
-                <option value="">-- Choose a city --</option>
-            </select>
+{% block content %}
+<div class="dashboard-grid fade-in">
+    <!-- Configuration Panel -->
+    <div class="col-span-12 glass" style="margin-bottom: 2rem;">
+        <div style="padding: 2.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1.5rem;">
+                <div>
+                    <h2 class="gradient-text" style="margin:0; font-size:1.8rem;">ML Engine Configuration</h2>
+                    <p style="color:var(--text-low); margin-top:0.5rem; max-width:600px;">Synchronize with live monitoring stations or manually adjust atmospheric components to run the Random Forest prediction model.</p>
+                </div>
+                <div class="input-group" style="min-width:280px;">
+                    <label style="color:var(--text-mid); font-size:0.75rem; text-transform:uppercase; letter-spacing:1px;">Sync Live Data</label>
+                    <select id="city-select" class="input-control" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); padding:0.75rem;">
+                        <option value="">-- Manual Configuration --</option>
+                    </select>
+                </div>
+            </div>
         </div>
     </div>
     
-    <div class="col-span-7 card glass-panel">
-        <h3 style="margin-bottom: 1.5rem;">Pollutant Configuration</h3>
-        <form id="prediction-form">
-            <div style="display:flex; gap:1.5rem; margin-bottom:1.5rem;">
-                <div class="slider-group" style="flex:1;">
-                    <div class="slider-header">
-                        <label>PM2.5 (µg/m³)</label>
-                        <input type="number" step="0.01" id="pm2_5" class="input-control" style="width: 90px; padding: 0.3rem;" required value="0">
+    <!-- Input Form -->
+    <div class="col-span-7 glass">
+        <div style="padding: 2.5rem;">
+            <h3 style="margin-bottom: 2.5rem; font-size:1.3rem;">Atmospheric Pollutants</h3>
+            <form id="prediction-form">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2.5rem; margin-bottom:2.5rem;">
+                    <div class="slider-group">
+                        <div class="slider-header" style="margin-bottom:1.5rem;">
+                            <label style="font-weight:600;">PM2.5 <span style="font-weight:400; color:var(--text-low); font-size:0.8rem;">(Fine)</span></label>
+                            <input type="number" step="0.01" id="pm2_5" class="input-control small-input" required value="0">
+                        </div>
+                        <input type="range" id="pm2_5_slider" min="0" max="500" step="1" value="0">
                     </div>
-                    <input type="range" id="pm2_5_slider" min="0" max="500" step="1" value="0">
-                </div>
-                <div class="slider-group" style="flex:1;">
-                    <div class="slider-header">
-                        <label>PM10 (µg/m³)</label>
-                        <input type="number" step="0.01" id="pm10" class="input-control" style="width: 90px; padding: 0.3rem;" required value="0">
+                    
+                    <div class="slider-group">
+                        <div class="slider-header" style="margin-bottom:1.5rem;">
+                            <label style="font-weight:600;">PM10 <span style="font-weight:400; color:var(--text-low); font-size:0.8rem;">(Coarse)</span></label>
+                            <input type="number" step="0.01" id="pm10" class="input-control small-input" required value="0">
+                        </div>
+                        <input type="range" id="pm10_slider" min="0" max="500" step="1" value="0">
                     </div>
-                    <input type="range" id="pm10_slider" min="0" max="500" step="1" value="0">
-                </div>
-            </div>
-            
-            <div style="display:flex; gap:1.5rem; margin-bottom:1.5rem;">
-                <div class="slider-group" style="flex:1;">
-                    <div class="slider-header">
-                        <label>NO2 (µg/m³)</label>
-                        <input type="number" step="0.01" id="no2" class="input-control" style="width: 90px; padding: 0.3rem;" required value="0">
+
+                    <div class="slider-group">
+                        <div class="slider-header" style="margin-bottom:1.5rem;">
+                            <label style="font-weight:600;">Nitrogen Dioxide <span style="font-weight:400; color:var(--text-low); font-size:0.8rem;">(NO₂)</span></label>
+                            <input type="number" step="0.01" id="no2" class="input-control small-input" required value="0">
+                        </div>
+                        <input type="range" id="no2_slider" min="0" max="400" step="1" value="0">
                     </div>
-                    <input type="range" id="no2_slider" min="0" max="400" step="1" value="0">
-                </div>
-                <div class="slider-group" style="flex:1;">
-                    <div class="slider-header">
-                        <label>SO2 (µg/m³)</label>
-                        <input type="number" step="0.01" id="so2" class="input-control" style="width: 90px; padding: 0.3rem;" required value="0">
+                    
+                    <div class="slider-group">
+                        <div class="slider-header" style="margin-bottom:1.5rem;">
+                            <label style="font-weight:600;">Sulfur Dioxide <span style="font-weight:400; color:var(--text-low); font-size:0.8rem;">(SO₂)</span></label>
+                            <input type="number" step="0.01" id="so2" class="input-control small-input" required value="0">
+                        </div>
+                        <input type="range" id="so2_slider" min="0" max="1000" step="1" value="0">
                     </div>
-                    <input type="range" id="so2_slider" min="0" max="1600" step="1" value="0">
-                </div>
-            </div>
-            
-            <div style="display:flex; gap:1.5rem; margin-bottom:1.5rem;">
-                <div class="slider-group" style="flex:1;">
-                    <div class="slider-header">
-                        <label>CO (mg/m³)</label>
-                        <input type="number" step="0.01" id="co" class="input-control" style="width: 90px; padding: 0.3rem;" required value="0">
+
+                    <div class="slider-group">
+                        <div class="slider-header" style="margin-bottom:1.5rem;">
+                            <label style="font-weight:600;">Carbon Monoxide <span style="font-weight:400; color:var(--text-low); font-size:0.8rem;">(CO)</span></label>
+                            <input type="number" step="0.01" id="co" class="input-control small-input" required value="0">
+                        </div>
+                        <input type="range" id="co_slider" min="0" max="25" step="0.1" value="0">
                     </div>
-                    <input type="range" id="co_slider" min="0" max="50" step="0.1" value="0">
-                </div>
-                <div class="slider-group" style="flex:1;">
-                    <div class="slider-header">
-                        <label>Ozone / O3 (µg/m³)</label>
-                        <input type="number" step="0.01" id="o3" class="input-control" style="width: 90px; padding: 0.3rem;" required value="0">
+                    
+                    <div class="slider-group">
+                        <div class="slider-header" style="margin-bottom:1.5rem;">
+                            <label style="font-weight:600;">Ground Ozone <span style="font-weight:400; color:var(--text-low); font-size:0.8rem;">(O₃)</span></label>
+                            <input type="number" step="0.01" id="o3" class="input-control small-input" required value="0">
+                        </div>
+                        <input type="range" id="o3_slider" min="0" max="300" step="1" value="0">
                     </div>
-                    <input type="range" id="o3_slider" min="0" max="800" step="1" value="0">
                 </div>
-            </div>
-            
-            <button type="submit" class="btn" style="width:100%; justify-content:center; margin-top:1rem;">
-                <i class="fa-solid fa-brain"></i> Predict AQI (Random Forest)
-            </button>
-        </form>
+                
+                <button type="submit" class="btn" style="width:100%; height:60px; font-size:1.1rem; justify-content:center; text-transform:uppercase; letter-spacing:2px; font-weight:800; border-radius:16px;">
+                    <i class="fa-solid fa-microchip"></i> Run Prediction Model
+                </button>
+            </form>
+        </div>
     </div>
     
-    <div class="col-span-5 card glass-panel">
-        <h3 style="margin-bottom: 1.5rem;">AI Predicted AQI Result</h3>
-        
-        <div id="result-container" style="display:none; width: 100%;">
-            <div class="neon-orb-container">
-                <div id="pred-orb" class="neon-orb">
-                    <div id="pred-aqi" class="val">125</div>
-                    <div class="lbl">AQI</div>
+    <!-- Result Display -->
+    <div class="col-span-5 glass" style="display:flex; flex-direction:column;">
+        <div style="padding: 2.5rem; flex:1;">
+            <h3 style="margin-bottom: 2.5rem; font-size:1.3rem;">AI Model Projection</h3>
+            
+            <div id="result-container" class="fade-in" style="display:none; text-align:center;">
+                <div class="aqi-large-glow" id="pred-aqi-display" style="font-size:8rem; margin:1rem 0;">--</div>
+                
+                <div style="margin-bottom: 2.5rem;">
+                    <span id="pred-status" class="badge" style="font-size:1.1rem; padding: 0.75rem 2rem;">--</span>
                 </div>
-                <div style="margin-bottom: 1.5rem; text-align:center;">
-                    <span id="pred-status" class="badge" style="font-size:1.1rem; padding: 0.5rem 1.5rem;">Poor</span>
+                
+                <div class="glass" style="text-align:left; padding:2rem; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255,255,255,0.05);">
+                    <h4 style="margin-bottom:0.75rem; color:white; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px;"><i class="fa-solid fa-shield-heart" style="margin-right:0.5rem; color:var(--accent-primary);"></i> Health Advisory</h4>
+                    <p id="pred-health" style="color:var(--text-mid); font-size:0.95rem; line-height:1.6;"></p>
                 </div>
             </div>
             
-            <div style="text-align:left; background: rgba(0,0,0,0.2); padding:1rem; border-radius:12px;">
-                <h4 style="margin-bottom:0.5rem;"><i class="fa-solid fa-stethoscope"></i> Health Recommendation</h4>
-                <p id="pred-health" style="color:var(--text-secondary); font-size:0.9rem;"></p>
+            <div id="empty-state" style="text-align:center; padding: 6rem 0; color:var(--text-low);">
+                <div style="font-size:4rem; margin-bottom:1.5rem; opacity:0.3; animation: float 3s ease-in-out infinite;">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
+                <p style="font-size:1.1rem; font-weight:500;">Awaiting Input</p>
+                <p style="font-size:0.85rem; margin-top:0.5rem;">Sync or enter pollutant data to view results</p>
             </div>
-        </div>
-        
-        <div id="empty-state" style="text-align:center; padding: 4rem 0; color:var(--text-muted);">
-            <i class="fa-solid fa-magnifying-glass-chart" style="font-size:3rem; margin-bottom:1rem; opacity:0.5;"></i>
-            <p>Enter pollutant values and run prediction</p>
         </div>
     </div>
 </div>
@@ -107,26 +119,27 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('city-select');
-    INDIAN_CITIES.forEach(city => {
-        const opt = document.createElement('option');
-        opt.value = city;
-        opt.textContent = city;
-        select.appendChild(opt);
-    });
+    if (typeof INDIAN_CITIES !== 'undefined') {
+        INDIAN_CITIES.forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            select.appendChild(opt);
+        });
+    }
     
     const sliders = ['pm2_5', 'pm10', 'no2', 'so2', 'co', 'o3'];
     
-    // Setup bi-directional syncing and color grading for sliders
     function updateSliderColor(slider) {
         const val = parseFloat(slider.value) || 0;
         const max = parseFloat(slider.max);
         const percent = Math.min(100, Math.max(0, (val / max) * 100));
         
-        let color = '#10b981'; // Green
-        if(percent > 20) color = '#eab308'; // Yellow
-        if(percent > 40) color = '#f97316'; // Orange
-        if(percent > 60) color = '#ef4444'; // Red
-        if(percent > 80) color = '#9f1239'; // Maroon
+        let color = '#10b981'; 
+        if(percent > 20) color = '#eab308';
+        if(percent > 40) color = '#f97316';
+        if(percent > 60) color = '#ef4444';
+        if(percent > 80) color = '#9f1239';
         
         slider.style.background = `linear-gradient(to right, ${color} ${percent}%, rgba(255,255,255,0.1) ${percent}%)`;
     }
@@ -135,48 +148,55 @@ document.addEventListener('DOMContentLoaded', () => {
         const numInput = document.getElementById(key);
         const slInput = document.getElementById(key + '_slider');
         
-        numInput.addEventListener('input', () => {
-            slInput.value = numInput.value;
+        if (numInput && slInput) {
+            numInput.addEventListener('input', () => {
+                slInput.value = numInput.value;
+                updateSliderColor(slInput);
+            });
+            slInput.addEventListener('input', () => {
+                numInput.value = slInput.value;
+                updateSliderColor(slInput);
+            });
             updateSliderColor(slInput);
-        });
-        
-        slInput.addEventListener('input', () => {
-            numInput.value = slInput.value;
-            updateSliderColor(slInput);
-        });
-        
-        // Initialize color
-        updateSliderColor(slInput);
+        }
     });
 
     select.addEventListener('change', async (e) => {
         const city = e.target.value;
         if(!city) return;
         
-        const res = await fetch(`/api/pollution?city=${city}`);
-        const data = await res.json();
-        
-        if(data.data) {
-            const mappings = {
-                'pm2_5': data.data.pm2_5,
-                'pm10': data.data.pm10,
-                'no2': data.data.no2,
-                'so2': data.data.so2,
-                'co': data.data.co / 1000,
-                'o3': data.data.o3
-            };
+        select.disabled = true;
+        try {
+            const res = await fetch(`/api/pollution?city=${city}`);
+            const data = await res.json();
             
-            for (const [key, val] of Object.entries(mappings)) {
-                document.getElementById(key).value = val.toFixed(2);
-                const slider = document.getElementById(key + '_slider');
-                slider.value = val;
-                updateSliderColor(slider);
+            if(data.data) {
+                const mappings = {
+                    'pm2_5': data.data.pm2_5,
+                    'pm10': data.data.pm10,
+                    'no2': data.data.no2,
+                    'so2': data.data.so2,
+                    'co': data.data.co / 1000,
+                    'o3': data.data.o3
+                };
+                
+                for (const [key, val] of Object.entries(mappings)) {
+                    const num = document.getElementById(key);
+                    const sli = document.getElementById(key + '_slider');
+                    if (num && sli) {
+                        num.value = val.toFixed(2);
+                        sli.value = val;
+                        updateSliderColor(sli);
+                    }
+                }
             }
-        }
+        } finally { select.disabled = false; }
     });
     
     document.getElementById('prediction-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const submitBtn = e.target.querySelector('button');
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing Model...';
         
         const payload = {
             pm2_5: parseFloat(document.getElementById('pm2_5').value),
@@ -203,29 +223,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 const aqi = data.predicted_aqi;
                 const info = getAqiInfo(aqi);
                 
-                const orb = document.getElementById('pred-orb');
-                orb.style.boxShadow = `0 0 50px ${info.colorHex}60`;
-                orb.style.borderColor = info.colorHex;
-
-                document.getElementById('pred-aqi').textContent = aqi;
-                document.getElementById('pred-aqi').style.color = info.colorHex;
-                document.getElementById('pred-aqi').className = "val"; // Reset classes
+                const display = document.getElementById('pred-aqi-display');
+                display.textContent = Math.floor(aqi);
+                display.style.color = info.colorHex;
+                display.style.textShadow = `0 0 40px ${info.colorHex}50`;
                 
-                document.getElementById('pred-status').textContent = info.label;
-                document.getElementById('pred-status').className = `badge ${info.bgClass}`;
+                const status = document.getElementById('pred-status');
+                status.textContent = info.label;
+                status.className = `badge ${info.bgClass}`;
                 
+                // Logic based on official WHO/NAQI recommendations
                 let health = "";
-                if(aqi <= 50) health = "Air quality is considered satisfactory, and air pollution poses little or no risk.";
-                else if(aqi <= 100) health = "Air quality is acceptable. However, there may be a risk for some people, particularly those who are unusually sensitive to air pollution.";
-                else if(aqi <= 200) health = "Members of sensitive groups may experience health effects. The general public is less likely to be affected. Reduce prolonged outdoor exertion.";
-                else if(aqi <= 300) health = "Health alert: The risk of health effects is increased for everyone. Avoid prolonged outdoor exertion.";
-                else health = "Health warning of emergency conditions: everyone is more likely to be affected. Stay indoors.";
+                if(aqi <= 50) health = "Optimal atmospheric conditions. Minimal risk to sensitive groups. Excellent for outdoor activities.";
+                else if(aqi <= 100) health = "Minor sensitivity levels detected. Unusually sensitive individuals should monitor respiratory symptoms.";
+                else if(aqi <= 200) health = "Elevated pollution detected. Consider limiting prolonged outdoor activities. Use air purifiers where available.";
+                else if(aqi <= 300) health = "Significant health risk detected for all groups. Avoid strenuous outdoor exercise and wear filtration masks.";
+                else health = "EMERGENCY STATE: Severe respiratory hazard. Everyone should remain indoors and keep windows sealed.";
                 
                 document.getElementById('pred-health').textContent = health;
+                cont.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
-        } catch(err) {
-            console.error(err);
-        }
+        } catch(err) { console.error(err); }
+        finally { submitBtn.innerHTML = '<i class="fa-solid fa-microchip"></i> Run Prediction Model'; }
     });
 });
 </script>
