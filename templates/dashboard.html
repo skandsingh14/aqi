@@ -1,176 +1,221 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<!-- Executive Overview Stats -->
+<div class="dashboard-grid fade-in" id="executive-grid">
+    <!-- Main Station Cards (Top 3) -->
+</div>
+
+<!-- Detailed Analytics Engine -->
+<div class="dashboard-grid fade-in" style="margin-top: 4rem;">
+    <!-- Large Comparison Chart -->
+    <div class="col-span-8 glass" style="padding: 3rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3rem;">
+            <div>
+                <h3 class="gradient-text" style="margin:0; font-size:1.8rem;">Regional Intelligence Map</h3>
+                <p style="color:var(--text-low); margin-top:0.5rem;">Cross-station AQI comparison across priority zones</p>
+            </div>
+            <button class="btn" id="refresh-btn" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); height:50px; border-radius:100px;">
+                <i class="fa-solid fa-rotate"></i> Sync Live
+            </button>
+        </div>
+        <div id="chart-loader" class="loader-container" style="height: 400px;"><div class="spinner"></div></div>
+        <div class="chart-container" id="bar-chart-wrapper" style="height:400px; display:none;">
+            <canvas id="aqiBarChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Pollutant Distribution -->
+    <div class="col-span-4 glass" style="padding: 3rem;">
+        <h3 style="margin-bottom:3rem; font-size:1.4rem;">Pollutant Mix</h3>
+        <div class="chart-container" style="height: 320px;">
+            <canvas id="pollutantPieChart"></canvas>
+        </div>
+        <div style="margin-top:2rem; padding-top:2rem; border-top:1px solid rgba(255,255,255,0.05); font-size:0.85rem; color:var(--text-low);">
+            <i class="fa-solid fa-circle-info"></i> Calculated from real-time sensor network averages.
+        </div>
+    </div>
+    
+    <!-- Global Ranking List -->
+    <div class="col-span-12 glass" style="padding: 4rem;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:4rem;">
+            <div>
+                <h2 class="gradient-text" style="font-size:2.2rem;">National Priority Index</h2>
+                <p style="color:var(--text-mid); margin-top:0.5rem;">Live ranking of major monitored urban centers</p>
+            </div>
+            <div class="badge bg-poor">Status: Live Monitoring</div>
+        </div>
+        <div id="ranking-list" class="ranking-grid">
+            <!-- Dual column ranking list -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
+    const refreshBtn = document.getElementById('refresh-btn');
+    const loader = document.getElementById('chart-loader');
+    const barWrapper = document.getElementById('bar-chart-wrapper');
+    const aqiCanvas = document.getElementById('aqiBarChart');
+    const pieCanvas = document.getElementById('pollutantPieChart');
+    const rankingList = document.getElementById('ranking-list');
+    const execGrid = document.getElementById('executive-grid');
+    
+    let aqiChartInstance = null;
+    let pieChartInstance = null;
+    
+    // ✅ ONLY CITY NAME FUNCTION
+    function getCityName(fullName){
+        if(!fullName) return 'Unknown';
+        return fullName.split('-')[0].split(',')[0].trim();
+    }
 
-const refreshBtn = document.getElementById('refresh-btn');
-const loader = document.getElementById('chart-loader');
-const barWrapper = document.getElementById('bar-chart-wrapper');
-const aqiCanvas = document.getElementById('aqiBarChart');
-const pieCanvas = document.getElementById('pollutantPieChart');
-const rankingList = document.getElementById('ranking-list');
-const execGrid = document.getElementById('executive-grid');
+    async function loadDashboardData() {
+        loader.style.display = 'flex';
+        barWrapper.style.display = 'none';
+        rankingList.innerHTML = '';
+        execGrid.innerHTML = '';
+        
+        if (aqiChartInstance) aqiChartInstance.destroy();
+        if (pieChartInstance) pieChartInstance.destroy();
+        
+        let citiesData = [];
+        let avgPollutants = { pm2_5:0, pm10:0, no2:0, so2:0, co:0, o3:0 };
+        
+        try {
+            const cities = ['Delhi','Mumbai','Bangalore','Chennai','Kolkata','Hyderabad','Pune','Ahmedabad','Jaipur','Lucknow'];
+            const res = await fetch(`/api/pollution/bulk?cities=${cities.join(',')}`);
+            const data = await res.json();
+            
+            if (Array.isArray(data) && data.length > 0) {
+                data.forEach(item => {
+                    if (!item || !item.data) return;
+                    citiesData.push({
+                        fullCity: item.city,
+                        city: getCityName(item.city),
+                        aqi: calculateProxyAqi(item.data),
+                        comps: item.data
+                    });
+                });
+                
+                citiesData.forEach(i => {
+                    avgPollutants.pm2_5 += i.comps.pm2_5||0;
+                    avgPollutants.pm10 += i.comps.pm10||0;
+                    avgPollutants.no2 += i.comps.no2||0;
+                    avgPollutants.so2 += i.comps.so2||0;
+                    avgPollutants.co += i.comps.co||0;
+                    avgPollutants.o3 += i.comps.o3||0;
+                });
+                
+                const count = citiesData.length || 1;
+                Object.keys(avgPollutants).forEach(k => avgPollutants[k] /= count);
+            }
+        } catch(e) { 
+            console.error("Dashboard Sync Error:", e);
+        } finally { 
+            loader.style.display = 'none'; 
+        }
+        
+        if (citiesData.length === 0) return;
+        citiesData.sort((a,b) => b.aqi - a.aqi);
 
-let aqiChartInstance = null;
-let pieChartInstance = null;
+        // --- Render Executive Cards (Top 3) ---
+        citiesData.slice(0, 3).forEach((item, i) => {
+            const info = getAqiInfo(item.aqi);
+            const card = document.createElement('div');
+            card.className = 'col-span-4 glass hover-lift';
+            card.style.padding = '3rem';
+            card.style.animationDelay = `${i * 0.1}s`;
 
+            card.innerHTML = `
+                <div style="color:var(--text-low); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:1.5rem;">
+                    ${i === 0 ? '<i class="fa-solid fa-crown" style="color:#fbbf24"></i> Peak Station' : i === 1 ? 'Regional Secondary' : 'Monitored Hub'}
+                </div>
+                <h2 style="font-size:2.2rem; font-weight:800; margin-bottom:0.5rem; color:white;">${item.city}</h2>
+                <div class="aqi-large-glow" style="color:${info.colorHex}; text-shadow: 0 0 50px ${info.colorHex}50; margin:1.5rem 0;">
+                    ${Math.floor(item.aqi)}
+                </div>
+                <div class="badge ${info.bgClass}" style="display:inline-block">${info.label}</div>
+            `;
+            execGrid.appendChild(card);
+        });
 
-// ✅ ONLY CITY NAME FUNCTION
-function getCityName(fullName){
-return fullName.split('-')[0].split(',')[0].trim();
-}
-
-
-async function loadDashboardData(){
-
-loader.style.display='flex';
-barWrapper.style.display='none';
-rankingList.innerHTML='';
-execGrid.innerHTML='';
-
-if(aqiChartInstance){aqiChartInstance.destroy();}
-if(pieChartInstance){pieChartInstance.destroy();}
-
-let citiesData=[];
-let avgPollutants={pm2_5:0,pm10:0,no2:0,so2:0,co:0,o3:0};
-
-try{
-
-const cities=[
-'Delhi','Mumbai','Bangalore','Chennai','Kolkata',
-'Hyderabad','Pune','Ahmedabad','Jaipur','Lucknow'
-];
-
-const res=await fetch(`/api/pollution/bulk?cities=${cities.join(',')}`);
-const data=await res.json();
-
-data.forEach(item=>{
-if(!item || !item.data) return;
-
-citiesData.push({
-city:getCityName(item.city),   // ✅ ONLY CITY
-aqi:calculateProxyAqi(item.data),
-comps:item.data
-});
-});
-
-citiesData.forEach(i=>{
-avgPollutants.pm2_5+=i.comps.pm2_5||0;
-avgPollutants.pm10+=i.comps.pm10||0;
-avgPollutants.no2+=i.comps.no2||0;
-avgPollutants.so2+=i.comps.so2||0;
-avgPollutants.co+=i.comps.co||0;
-avgPollutants.o3+=i.comps.o3||0;
-});
-
-Object.keys(avgPollutants).forEach(k=>{
-avgPollutants[k]/=citiesData.length;
-});
-
-}catch(e){
-console.error(e);
-}
-
-loader.style.display='none';
-
-citiesData.sort((a,b)=>b.aqi-a.aqi);
-
-
-// ✅ TOP 3 CARDS
-citiesData.slice(0,3).forEach((item,i)=>{
-
-const info=getAqiInfo(item.aqi);
-
-const card=document.createElement('div');
-card.className='col-span-4 glass';
-
-card.innerHTML=`
-<div>${item.city}</div>
-<div style="font-size:40px;color:${info.colorHex}">
-${Math.floor(item.aqi)}
-</div>
-<div class="badge ${info.bgClass}">
-${info.label}
-</div>
-`;
-
-execGrid.appendChild(card);
-
-});
-
-
-// ✅ RANKING LIST
-citiesData.forEach((item,index)=>{
-
-const info=getAqiInfo(item.aqi);
-
-const div=document.createElement('div');
-
-div.style.cssText="display:flex;justify-content:space-between;padding:1rem 0;border-bottom:1px solid rgba(255,255,255,0.05);";
-
-div.innerHTML=`
-<div>
-${index+1}. ${item.city}
-</div>
-
-<div class="badge ${info.bgClass}">
-${Math.floor(item.aqi)}
-</div>
-`;
-
-rankingList.appendChild(div);
-
-});
-
-
-// ✅ BAR CHART
-barWrapper.style.display='block';
-
-aqiChartInstance=new Chart(aqiCanvas,{
-type:'bar',
-data:{
-labels:citiesData.map(d=>d.city), // only city
-datasets:[{
-data:citiesData.map(d=>d.aqi),
-backgroundColor:'#6366f1'
-}]
-},
-options:{
-responsive:true,
-maintainAspectRatio:false
-}
-});
-
-
-// ✅ PIE CHART
-pieChartInstance=new Chart(pieCanvas,{
-type:'doughnut',
-data:{
-labels:['PM2.5','PM10','NO2','SO2','CO','O3'],
-datasets:[{
-data:[
-avgPollutants.pm2_5,
-avgPollutants.pm10,
-avgPollutants.no2,
-avgPollutants.so2,
-avgPollutants.co,
-avgPollutants.o3
-]
-}]
-},
-options:{
-responsive:true,
-maintainAspectRatio:false
-}
-});
-
-}
-
-refreshBtn.addEventListener('click',loadDashboardData);
-
-loadDashboardData();
-
-setInterval(()=>{
-if(!document.hidden) loadDashboardData();
-},300000);
-
+        // --- Render Ranking List ---
+        citiesData.forEach((item, index) => {
+            const info = getAqiInfo(item.aqi);
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.alignItems = 'center';
+            div.style.padding = '1.5rem 0.5rem';
+            div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+            
+            div.innerHTML = `
+                <div style="display:flex; gap:1.25rem; align-items:center;">
+                    <span style="color:var(--text-low); font-weight:800; font-size:0.9rem;">${index+1}</span>
+                    <div style="color:var(--text-high); font-weight:600; font-size:1.05rem;">${item.city}</div>
+                </div>
+                <div class="badge ${info.bgClass}" style="min-width:100px; text-align:center;">${Math.floor(item.aqi)}</div>
+            `;
+            rankingList.appendChild(div);
+        });
+        
+        barWrapper.style.display = 'block';
+        
+        // --- Bar Chart ---
+        aqiChartInstance = new Chart(aqiCanvas, {
+            type: 'bar',
+            data: {
+                labels: citiesData.map(d => d.city),
+                datasets: [{
+                    label: 'AQI Level',
+                    data: citiesData.map(d => d.aqi),
+                    backgroundColor: '#6366f1',
+                    borderRadius: 8,
+                    barThickness: 25
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: 'rgba(255,255,255,0.03)' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+        
+        // --- Pie Chart ---
+        pieChartInstance = new Chart(pieCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['PM2.5', 'PM10', 'NO2', 'SO2', 'CO', 'O3'],
+                datasets: [{
+                    data: [
+                        avgPollutants.pm2_5, avgPollutants.pm10, avgPollutants.no2, 
+                        avgPollutants.so2, avgPollutants.co, avgPollutants.o3
+                    ],
+                    backgroundColor: ['#6366f1', '#0ea5e9', '#f472b6', '#10b981', '#f59e0b', '#8b5cf6'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } },
+                cutout: '80%'
+            }
+        });
+    }
+    
+    refreshBtn.addEventListener('click', loadDashboardData);
+    loadDashboardData();
+    setInterval(loadDashboardData, 300000);
 });
 </script>
+{% endblock %}
