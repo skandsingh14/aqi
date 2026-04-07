@@ -8,11 +8,18 @@
         <div id="india-map" style="height: 100%; width: 100%;"></div>
         
         <!-- Hover Overlay Info (Optional) -->
-        <div style="position: absolute; bottom: 2rem; left: 2rem; z-index: 1000; pointer-events: none;">
+        <div style="position: absolute; bottom: 2rem; left: 2.5rem; z-index: 1000; pointer-events: none; display: flex; flex-direction: column; gap: 1rem;">
             <div id="map-worst" class="glass" style="padding: 1rem 1.5rem; display:none; background: rgba(136, 19, 55, 0.4); border: 1px solid rgba(251, 113, 133, 0.3);">
-                <span style="color: #fb7185; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Critical Priority</span>
-                <div id="worst-text" style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">--</div>
+                <span style="color: #fb7185; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Metropolitan Priority</span>
+                <div id="worst-text" style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">Station Discovery Active</div>
             </div>
+        </div>
+
+        <!-- GPS Float -->
+        <div style="position: absolute; top: 2rem; left: 2.5rem; z-index: 1000;">
+            <button id="geo-btn-map" class="btn" style="height:55px; border-radius:100px; padding:0 2rem; background:var(--accent-primary); box-shadow:0 15px 30px rgba(99,102,241,0.3);">
+                <i class="fa-solid fa-location-crosshairs"></i> Locate Me
+            </button>
         </div>
     </div>
     
@@ -53,38 +60,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         maxZoom: 20
     }).addTo(map);
 
-    let cityData = [];
-    
-    try {
-        const bulkRes = await fetch(`/api/pollution_bulk?cities=${INDIAN_CITIES.join(',')}`);
-        const bulkData = await bulkRes.json();
-        
-        if (Array.isArray(bulkData) && bulkData.length > 0) {
+    // 1. Fetch High-Density Station Data for Big Cities
+    const bigCities = ['Delhi', 'Mumbai', 'Bangalore', 'Kolkata', 'Chennai', 'Hyderabad'];
+    const otherCities = INDIAN_CITIES.filter(c => !bigCities.includes(c));
+
+    async function loadMapData() {
+        try {
+            // First, load all 'other' cities normally
+            const bulkRes = await fetch(`/api/pollution/bulk?cities=${otherCities.join(',')}`);
+            const bulkData = await bulkRes.json();
             bulkData.forEach(item => {
-                if (item.data) {
+                if(item.data && item.lat) {
                     const aqi = calculateProxyAqi(item.data);
-                    if (item.lat && item.lon) {
-                        cityData.push({ city: item.city, aqi, lat: item.lat, lon: item.lon, comps: item.data });
-                    }
+                    cityData.push({ city: item.city, aqi, lat: item.lat, lon: item.lon, comps: item.data });
                 }
             });
-        }
-    } catch(e) { console.error("Map fetch error", e); }
-    
-    document.getElementById('map-loader').style.display = 'none';
-    
-    if(cityData.length > 0) {
-        cityData.sort((a,b) => b.aqi - a.aqi);
-        const worst = cityData[0];
-        const worstBox = document.getElementById('map-worst');
+
+            // Second, deep-search BIG CITIES for 'all places'
+            for(let city of bigCities) {
+                try {
+                    const searchRes = await fetch(`/api/pollution/search?city=${city}`);
+                    const searchData = await searchRes.json();
+                    searchData.forEach(item => {
+                        if(item.data && item.lat) {
+                             const aqi = calculateProxyAqi(item.data);
+                             cityData.push({ city: item.city, aqi, lat: item.lat, lon: item.lon, comps: item.data });
+                        }
+                    });
+                } catch(e) { console.error(`Search failed for ${city}`, e); }
+            }
+            
+            renderMarkers();
+        } catch(e) { console.error("Map fetch error", e); }
+        document.getElementById('map-loader').style.display = 'none';
+        document.getElementById('map-worst').style.display = 'block';
+    }
+
+    function renderMarkers() {
+        if(cityData.length === 0) return;
+        
+        // Pick the top 10 worst stations across all discoveries
+        // --- Metropolitan Priority Alert ---
         const worstText = document.getElementById('worst-text');
-        worstBox.style.display = 'block';
-        worstText.textContent = `${worst.city}`;
+        if (worstStations.length > 0) worstText.textContent = `${worstStations[0].city}`;
         
         cityData.forEach(item => {
             const info = getAqiInfo(item.aqi);
             const station = item.city.split(',')[0];
-            const city = item.city.split(',').slice(-1)[0].trim();
 
             const markerHtml = `
                 <div style="display:flex; flex-direction:column; align-items:center;" class="animated-marker">
@@ -92,8 +114,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         background-color: ${info.colorHex};
                         width: 14px; height: 14px;
                         border-radius: 50%;
-                        border: 2px solid white;
-                        box-shadow: 0 0 20px ${info.colorHex}60;
+                        border: 2px solid rgba(255,255,255,0.8);
+                        box-shadow: 0 0 15px ${info.colorHex};
                     "></div>
                 </div>
             `;
@@ -106,32 +128,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             
             const popupContent = `
-                <div class="glass" style="padding:15px; min-width:200px; border-radius:12px; background: rgba(15, 23, 42, 0.95);">
-                    <div style="font-size:0.75rem; text-transform:uppercase; color:var(--text-low); margin-bottom:0.25rem;">High-Precision Station</div>
+                <div class="glass" style="padding:15px; min-width:200px; border-radius:12px; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.15);">
+                    <div style="font-size:0.65rem; text-transform:uppercase; color:var(--text-low); letter-spacing:1px; margin-bottom:0.5rem;">Official Monitoring Hub</div>
                     <h3 style="margin:0 0 10px 0; font-size:1.1rem; color:white;">${station}</h3>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0;">
                         <span class="badge ${info.bgClass}">${info.label}</span>
-                        <b style="font-size:1.5rem; color:${info.colorHex}">${Math.floor(item.aqi)}</b>
-                    </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:11px; color:var(--text-mid);">
-                        <div>PM2.5: <b style="color:white">${item.comps.pm2_5.toFixed(1)}</b></div>
-                        <div>PM10: <b style="color:white">${item.comps.pm10.toFixed(1)}</b></div>
-                        <div>NO2: <b style="color:white">${item.comps.no2.toFixed(1)}</b></div>
-                        <div>CO: <b style="color:white">${item.comps.co.toFixed(1)}</b></div>
+                        <b style="font-size:1.6rem; color:white;">${Math.floor(item.aqi)}</b>
                     </div>
                 </div>
             `;
             
             L.marker([item.lat, item.lon], {icon: customIcon})
                 .addTo(map)
-                .bindPopup(popupContent, {
-                    closeButton: false,
-                    className: 'premium-popup'
-                })
+                .bindPopup(popupContent, { closeButton: false, className: 'premium-popup' })
                 .on('mouseover', function(e) { this.openPopup(); })
                 .on('mouseout', function(e) { this.closePopup(); });
         });
     }
+
+    // 2. GPS 'Locate Me' Logic
+    const geoBtn = document.getElementById('geo-btn-map');
+    geoBtn.addEventListener('click', () => {
+        if (!navigator.geolocation) return alert("Geolocation not supported");
+        geoBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Locating...';
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            const { latitude, longitude } = pos.coords;
+            map.setView([latitude, longitude], 12);
+            try {
+                const res = await fetch(`/api/pollution/nearest?lat=${latitude}&lon=${longitude}`);
+                const data = await res.json();
+                if(data.city) {
+                    L.popup()
+                        .setLatLng([latitude, longitude])
+                        .setContent(`<div class="glass" style="padding:1rem; background:rgba(99,102,241,0.2); font-size:0.9rem;"><b>Current Location</b><br>Station: ${data.city}</div>`)
+                        .openOn(map);
+                }
+            } catch(e) {}
+            finally { geoBtn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Locate Me'; }
+        }, () => { 
+            alert("Location access denied.");
+            geoBtn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Locate Me';
+        });
+    });
+
+    loadMapData();
 });
 </script>
 

@@ -1,39 +1,38 @@
 {% extends 'base.html' %}
 
-{% block page_title %}Health Recommendations{% endblock %}
+{% block page_title %}Medical & Health Advisory{% endblock %}
 
 {% block content %}
-<div class="dashboard-grid">
-    <div class="col-span-12 card glass-panel" style="margin-bottom:1rem;">
-        <h3 style="margin-bottom:1rem;">Check Local Health Advisory</h3>
-        <div style="display:flex; gap:1rem; align-items:center;">
-            <select id="health-city" class="input-control" style="max-width:300px;">
-                <option value="">-- Select your city --</option>
-            </select>
-            <div id="health-loader" class="spinner" style="display:none; width: 20px; height: 20px;"></div>
-        </div>
+<div class="hero-section" style="margin-top:2rem; padding:4rem 2rem; text-align:center;">
+    <h1 class="gradient-text hero-title-max" style="font-size:3.5rem;">Clinical Guidance System</h1>
+    <p style="color:var(--text-mid); max-width:700px; margin:0 auto; font-size:1.1rem;">Bio-metric based atmospheric recommendations for sensitive and respiratory health.</p>
+    
+    <div class="glass hover-lift" style="max-width:600px; margin:3rem auto 0; padding:1rem; border-radius:100px; display:flex; gap:1rem; align-items:center;">
+        <i class="fa-solid fa-stethoscope" style="margin-left:1.5rem; color:var(--accent-primary)"></i>
+        <select id="health-city" class="input-control" style="border:none; background:transparent; padding-left:1rem; flex:1; height:60px; cursor:pointer;">
+            <option value="">-- Targeted Health Check --</option>
+        </select>
+        <div id="health-loader" class="spinner" style="display:none; width: 25px; height: 25px; margin-right:1rem;"></div>
+    </div>
+</div>
+
+<div id="advice-section" class="dashboard-grid fade-in" style="display:none; margin-top:4rem;">
+    <div class="col-span-4 glass hover-lift" style="text-align:center; padding:4rem;">
+        <div style="color:var(--text-low); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:1.5rem;">Current Impact at <span id="disp-city" style="color:var(--accent-primary)">City</span></div>
+        <div id="health-aqi" style="font-size:7rem; font-weight:900; line-height:1;">--</div>
+        <div id="health-badge" class="badge" style="margin-top:2rem; font-size:1rem; padding:0.75rem 2rem;">--</div>
     </div>
     
-    <div id="advice-section" class="col-span-12" style="display:none;">
-        <div class="dashboard-grid">
-            <div class="col-span-4 card glass-panel" style="text-align:center;">
-                <h4 style="color:var(--text-secondary); margin-bottom:1rem;">Current AQI in <span id="disp-city"></span></h4>
-                <div id="health-aqi" style="font-size:5rem; font-weight:700; line-height:1;">--</div>
-                <div id="health-badge" class="badge" style="margin-top:1rem;">--</div>
-            </div>
-            
-            <div class="col-span-8 card glass-panel" id="advice-panel" style="border-left: 5px solid transparent;">
-                <h2 id="advice-title" style="margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
-                    <i class="fa-solid fa-heart-pulse"></i> Comprehensive Health Advice
-                </h2>
-                <div id="advice-content" style="font-size:1.1rem; line-height:1.6; color:var(--text-primary);">
-                    <!-- Dynamic Content -->
-                </div>
-                
-                <div style="margin-top:2rem; display:flex; gap:1rem;" id="advice-icons">
-                    <!-- Icons -->
-                </div>
-            </div>
+    <div class="col-span-8 glass hover-lift" id="advice-panel" style="padding:4rem; border-left: 8px solid var(--accent-primary);">
+        <h2 id="advice-title" style="margin-bottom:2rem; display:flex; align-items:center; gap:1rem; font-size:2rem; font-weight:800;">
+            <i class="fa-solid fa-heart-pulse" style="color:var(--accent-primary)"></i> Protective Health Advisory
+        </h2>
+        <div id="advice-content" style="font-size:1.3rem; line-height:1.7; color:var(--text-high); font-weight:300;">
+            <!-- Dynamic Content -->
+        </div>
+        
+        <div style="margin-top:3rem; display:flex; flex-wrap:wrap; gap:1rem;" id="advice-icons">
+            <!-- Icons -->
         </div>
     </div>
 </div>
@@ -62,11 +61,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const aqi = calculateProxyAqi(data.data);
                 const info = getAqiInfo(aqi);
                 
-                document.getElementById('advice-section').style.display = 'block';
+                document.getElementById('advice-section').style.display = 'grid';
                 document.getElementById('disp-city').textContent = city;
                 
-                document.getElementById('health-aqi').textContent = aqi;
-                document.getElementById('health-aqi').className = info.colorClass;
+                const aqiEl = document.getElementById('health-aqi');
+                aqiEl.textContent = Math.floor(aqi);
+                aqiEl.style.color = info.colorHex;
                 
                 document.getElementById('health-badge').textContent = info.label;
                 document.getElementById('health-badge').className = `badge ${info.bgClass}`;
@@ -78,26 +78,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const icons = document.getElementById('advice-icons');
                 
                 if(aqi <= 50) {
-                    content.innerHTML = `<p>Air quality is great! A perfect day for outdoor activities. The air pollution poses little to no risk. Enjoy the outdoors and ventilate your home.</p>`;
-                    icons.innerHTML = `<div class="badge bg-good"><i class="fa-solid fa-person-running"></i> Outdoor Sports OK</div>
-                                     <div class="badge bg-good"><i class="fa-solid fa-house-chimney-window"></i> Open Windows</div>`;
+                    content.innerHTML = `<p>Optimal atmospheric state detected. Respiratory environment is <strong>Ideal</strong> for all demographics. Outdoor athletic performance and ventilation are recommended.</p>`;
+                    icons.innerHTML = `<div class="badge bg-good"><i class="fa-solid fa-person-running"></i> Peak Athletic Condition</div>
+                                     <div class="badge bg-good"><i class="fa-solid fa-wind"></i> Natural Ventilation Recommended</div>`;
                 } else if(aqi <= 100) {
-                    content.innerHTML = `<p>Air quality is acceptable. However, unusually sensitive people should consider reducing prolonged or heavy exertion outdoors. It is generally safe for normal activities.</p>`;
-                    icons.innerHTML = `<div class="badge bg-moderate"><i class="fa-solid fa-person-running"></i> Light Outdoor Sports OK</div>`;
+                    content.innerHTML = `<p>Stable atmospheric conditions. Acceptable for general population, though sensitive cohorts should avoid excessive prolonged heavy exertion during peak heat hours.</p>`;
+                    icons.innerHTML = `<div class="badge bg-moderate"><i class="fa-solid fa-person-running"></i> Moderate Exertion Cycle</div>`;
                 } else if(aqi <= 200) {
-                    content.innerHTML = `<p><strong>Poor Air Quality.</strong> Children, the elderly, and those with respiratory or heart conditions should reduce prolonged outdoor exertion. Healthy individuals might start feeling eye and throat irritation.</p>`;
-                    icons.innerHTML = `<div class="badge bg-poor"><i class="fa-solid fa-mask"></i> Consider Mask for Sensitive Groups</div>
-                                     <div class="badge bg-poor"><i class="fa-solid fa-ban"></i> Avoid Heavy Exertion</div>`;
+                    content.innerHTML = `<p><strong>Adverse Environment.</strong> Elevated particulate density detected. High-risk groups (pediatric, geriatric, respiratory patients) should minimize outdoor cycles. Healthy adults may experience irritation.</p>`;
+                    icons.innerHTML = `<div class="badge bg-poor" style="padding:1rem;"><i class="fa-solid fa-mask"></i> Sensory Protection Advised</div>
+                                     <div class="badge bg-poor" style="padding:1rem;"><i class="fa-solid fa-ban"></i> Low Exertion Protocol</div>`;
                 } else if(aqi <= 300) {
-                    content.innerHTML = `<p><strong>Very Poor Air Quality.</strong> Health Alert! The risk of health effects is increased for everyone. Everyone should avoid prolonged outdoor exertion. Keep windows closed and consider using an air purifier indoors.</p>`;
-                    icons.innerHTML = `<div class="badge bg-vpoor"><i class="fa-solid fa-mask"></i> Wear N95 Mask Outdoors</div>
-                                     <div class="badge bg-vpoor"><i class="fa-solid fa-ban"></i> Avoid Outdoor Activities</div>
-                                     <div class="badge bg-vpoor"><i class="fa-solid fa-fan"></i> Use Air Purifier</div>`;
+                    content.innerHTML = `<p><strong>Hazardous Atmospheric Stance.</strong> Critical risk to collective respiratory health. Everyone should terminate outdoor exposure. Industrial-grade air filtration and N95 protection are non-negotiable for unavoidable transit.</p>`;
+                    icons.innerHTML = `<div class="badge bg-vpoor" style="padding:1.25rem;"><i class="fa-solid fa-mask-ventilator"></i> Mandatory N95 Respirator</div>
+                                     <div class="badge bg-vpoor" style="padding:1.25rem;"><i class="fa-solid fa-ban"></i> Zero Exposure Directive</div>
+                                     <div class="badge bg-vpoor" style="padding:1.25rem;"><i class="fa-solid fa-fan"></i> HEPA Filtration Required</div>`;
                 } else {
-                    content.innerHTML = `<p><strong>Severe Air Quality!</strong> Health Warning of Emergency Conditions. The entire population is highly likely to be affected. **Stay indoors** and keep activity levels very low. Ensure all windows are closed and run air filtration continuously.</p>`;
-                    icons.innerHTML = `<div class="badge bg-severe"><i class="fa-solid fa-house"></i> STAY INDOORS</div>
-                                     <div class="badge bg-severe"><i class="fa-solid fa-mask"></i> Mandatory N95 if going out</div>
-                                     <div class="badge bg-severe"><i class="fa-solid fa-truck-medical"></i> Immediate risk to health</div>`;
+                    content.innerHTML = `<p><strong>Atmospheric Emergency.</strong> Extreme critical toxicity. Immediate threat to biological health. Stay in sealed, filtered environments. Avoid all transit. Risk of acute respiratory failure in sensitive groups.</p>`;
+                    icons.innerHTML = `<div class="badge bg-severe" style="padding:1.5rem;"><i class="fa-solid fa-biohazard"></i> BIO-EMERGENCY STATE</div>
+                                     <div class="badge bg-severe" style="padding:1.5rem;"><i class="fa-solid fa-house-lock"></i> TOTAL INDOOR SHELTER</div>
+                                     <div class="badge bg-severe" style="padding:1.5rem;"><i class="fa-solid fa-truck-medical"></i> CLINICAL PRIORITY ALERT</div>`;
                 }
             }
         } catch(e) {

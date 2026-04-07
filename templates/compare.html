@@ -3,29 +3,31 @@
 {% block page_title %}City Comparison Tool{% endblock %}
 
 {% block content %}
-<div class="dashboard-grid">
-    <div class="col-span-12 card glass-panel" style="margin-bottom:2rem;">
-        <h3 style="margin-bottom:1rem;">Select Cities to Compare</h3>
-        <div style="display:flex; gap:1.5rem; align-items:center;">
-            <div class="input-group" style="flex:1;">
-                <label>City 1</label>
-                <select id="city1" class="input-control"></select>
+<div class="dashboard-grid fade-in">
+    <div class="col-span-12 glass hover-lift" style="margin-bottom:3rem; padding:3rem;">
+        <h3 class="gradient-text" style="margin-bottom:2rem; font-size:1.8rem;">Station-to-Station Deep Compare</h3>
+        <p style="color:var(--text-low); margin-bottom:2.5rem;">Cross-analyze atmospheric components between two regional monitoring hubs.</p>
+        
+        <div style="display:flex; gap:2rem; align-items:flex-end;">
+            <div style="flex:1;">
+                <label style="color:var(--text-mid); font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:1rem;">Primary Station</label>
+                <select id="city1" class="input-control" style="background:rgba(255,255,255,0.03);"></select>
             </div>
-            <div style="font-size:2rem; font-weight:700; color:var(--text-muted); margin-top:0.5rem;">VS</div>
-            <div class="input-group" style="flex:1;">
-                <label>City 2</label>
-                <select id="city2" class="input-control"></select>
+            <div style="font-size:1.5rem; font-weight:800; color:var(--text-low); margin-bottom:1.5rem;">VS</div>
+            <div style="flex:1;">
+                <label style="color:var(--text-mid); font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:1rem;">Secondary Station</label>
+                <select id="city2" class="input-control" style="background:rgba(255,255,255,0.03);"></select>
             </div>
-            <div style="margin-top:0.5rem;">
-                <button id="compare-btn" class="btn"><i class="fa-solid fa-code-compare"></i> Compare</button>
-            </div>
+            <button id="compare-btn" class="btn" style="height:60px; padding:0 3rem; border-radius:100px;">
+                <i class="fa-solid fa-code-compare"></i> Compare Hubs
+            </button>
         </div>
     </div>
     
     <!-- Comparison Results -->
-    <div class="col-span-12 card glass-panel" id="result-box" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
-            <h3>Comparison Report</h3>
+    <div class="col-span-12 glass fade-in" id="result-box" style="display:none; padding:4rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4rem;">
+            <h3 style="font-size:1.5rem;">Comparison Intelligence Report</h3>
             <div id="verdict-badge" class="badge">--</div>
         </div>
         

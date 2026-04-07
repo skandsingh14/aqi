@@ -174,18 +174,22 @@ def fetch_pollution_data(city):
                 else:
                     lat, lon = REAL_COORDS.get(city, (20.0, 78.0))
                 
-                # Map IAQI to our internal format with safer defaults
+                # Safe IAQI extraction function to handle "None/Null" values from API
+                def get_val(key):
+                    v = iaqi.get(key, {}).get('v')
+                    return v if v is not None else 0
+
                 comps = {
-                    'pm2_5': iaqi.get('pm25', {}).get('v', 0),
-                    'pm10': iaqi.get('pm10', {}).get('v', 0),
-                    'no2': iaqi.get('no2', {}).get('v', 0),
-                    'so2': iaqi.get('so2', {}).get('v', 0),
-                    'co': iaqi.get('co', {}).get('v', 0) * 1000, 
-                    'o3': iaqi.get('o3', {}).get('v', 0),
-                    'aqi': d.get('aqi', 0) # NEW: Include AQI here for the frontend
+                    'pm2_5': get_val('pm25'),
+                    'pm10': get_val('pm10'),
+                    'no2': get_val('no2'),
+                    'so2': get_val('so2'),
+                    'co': get_val('co') * 1000, 
+                    'o3': get_val('o3'),
+                    'aqi': d.get('aqi', 0)
                 }
                 res = {
-                    'city': d.get('city', {}).get('name', city), # NEW: Use Official Station Name
+                    'city': d.get('city', {}).get('name', city),
                     'lat': lat,
                     'lon': lon,
                     'data': comps,
@@ -240,13 +244,18 @@ def api_pollution_nearest():
             d = data['data']
             iaqi = d.get('iaqi', {})
             geo = d.get('city', {}).get('geo', [])
+            
+            def get_val(key):
+                v = iaqi.get(key, {}).get('v')
+                return v if v is not None else 0
+
             comps = {
-                'pm2_5': iaqi.get('pm25', {}).get('v', 0),
-                'pm10': iaqi.get('pm10', {}).get('v', 0),
-                'no2': iaqi.get('no2', {}).get('v', 0),
-                'so2': iaqi.get('so2', {}).get('v', 0),
-                'co': iaqi.get('co', {}).get('v', 0) * 1000, 
-                'o3': iaqi.get('o3', {}).get('v', 0),
+                'pm2_5': get_val('pm25'),
+                'pm10': get_val('pm10'),
+                'no2': get_val('no2'),
+                'so2': get_val('so2'),
+                'co': get_val('co') * 1000, 
+                'o3': get_val('o3'),
                 'aqi': d.get('aqi', 0)
             }
             res = {
@@ -267,23 +276,47 @@ def api_pollution():
     city = request.args.get('city', 'Delhi')
     return jsonify(fetch_pollution_data(city))
 
-@app.route('/api/pollution_bulk')
+@app.route('/api/pollution/bulk')
 def api_pollution_bulk():
     cities_str = request.args.get('cities', 'Delhi,Mumbai')
     cities = [c.strip() for c in cities_str.split(',') if c.strip()]
     
     # Use ThreadPoolExecutor to fetch all cities in parallel
     with ThreadPoolExecutor(max_workers=min(20, len(cities) + 1)) as executor:
-        results = list(executor.map(fetch_pollution_data, cities))
+        results = [r for r in list(executor.map(fetch_pollution_data, cities)) if r is not None]
         
-    if results:
-        print(f"📡 API Status Check | City: {results[0]['city']} | Source: {results[0].get('source')} | Key OK: {bool(openweathermap_api_key)}")
+    if results and len(results) > 0:
+        print(f"📡 API Status Check | City: {results[0]['city']} | Source: {results[0].get('source')}")
         
     return jsonify(results)
+
+@app.route('/api/pollution/search')
+def api_pollution_search():
+    city = request.args.get('city', 'Delhi')
+    if not aqicn_token:
+        # Fallback to single result if no token
+        return jsonify([fetch_pollution_data(city)])
+        
+    try:
+        url = f"https://api.waqi.info/search/?keyword={city}&token={aqicn_token}"
+        data = requests.get(url, timeout=10).json()
+        if data.get('status') == 'ok':
+            stations = data['data']
+            # We fetch full details for top 5 stations to keep it snappy
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                # Use a specific list of station IDs or names
+                results = [fetch_pollution_data(s['station']['name']) for s in stations[:8]]
+            return jsonify([r for r in results if r and r.get('source') == 'live'])
+    except Exception as e:
+        print(f"Search API Error: {e}")
+        
+    return jsonify([fetch_pollution_data(city)])
 
 @app.route('/api/predict', methods=['POST'])
 def api_predict():
     data = request.json
+    if not data:
+        return jsonify({'error': 'No JSON payload provided'}), 400
     try:
         pm25 = float(data.get('pm2_5', 0))
         pm10 = float(data.get('pm10', 0))

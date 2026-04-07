@@ -1,49 +1,44 @@
 {% extends 'base.html' %}
 
-{% block page_title %}Future AQI Prediction{% endblock %}
+{% block page_title %}Future Forecast Precision{% endblock %}
 
 {% block content %}
-<div class="dashboard-grid">
-    <div class="col-span-12 card glass-panel" style="margin-bottom:2rem;">
-        <h3 style="margin-bottom:1rem;">Select City for Forecast</h3>
-        <p style="color:var(--text-secondary); margin-bottom:1.5rem;">Select a city to predict its air quality for tomorrow using our Machine Learning model trained on live API data.</p>
-        <div style="display:flex; gap:1rem; max-width:500px;">
-            <select id="future-city" class="input-control">
-                <option value="">-- Select a city --</option>
-            </select>
-            <button id="forecast-btn" class="btn"><i class="fa-solid fa-cloud-sun"></i> Forecast Tomorrow</button>
-        </div>
+<div class="hero-section" style="margin-top:2rem; padding:4rem 2rem; text-align:center;">
+    <h1 class="gradient-text hero-title-max" style="font-size:3.5rem;">Atmospheric Forecast</h1>
+    <p style="color:var(--text-mid); max-width:700px; margin:0 auto; font-size:1.1rem;">Advanced ML-driven air quality prediction for the next 24-hour cycle.</p>
+    
+    <div class="glass hover-lift" style="max-width:600px; margin:3rem auto 0; padding:1rem; border-radius:100px; display:flex; gap:1rem;">
+        <select id="future-city" class="input-control" style="border:none; background:transparent; padding-left:2rem; flex:1; height:60px;">
+            <option value="">-- Choose Target City --</option>
+        </select>
+        <button id="forecast-btn" class="btn" style="height:60px; border-radius:100px; padding:0 2.5rem; font-weight:700;">Forecast Tomorrow</button>
+    </div>
+</div>
+
+<div id="forecast-result" class="dashboard-grid fade-in" style="display:none; margin-top:4rem;">
+    <!-- Cards -->
+    <div class="col-span-4 glass hover-lift" style="text-align:center; padding:3rem;">
+        <div style="color:var(--text-low); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:1.5rem;">Baseline Index</div>
+        <div id="curr-aqi" style="font-size: 5rem; font-weight:900; line-height:1; filter: drop-shadow(0 0 20px rgba(255,255,255,0.1));">--</div>
+        <div id="curr-status" class="badge" style="margin-top:1.5rem;">TODAY</div>
     </div>
     
-    <div id="forecast-result" class="col-span-12" style="display:none;">
-        <div class="dashboard-grid" style="margin-bottom:0;">
-            <!-- Current vs Future Cards -->
-            <div class="col-span-4 card glass-panel" style="text-align:center;">
-                <h4 style="margin-bottom:1rem; color:var(--text-secondary);">Current (Today)</h4>
-                <div id="curr-aqi" style="font-size: 4rem; font-weight:700; line-height:1;">--</div>
-                <div id="curr-status" class="badge" style="margin-top:1rem; margin-bottom:1rem;">--</div>
-            </div>
-            
-            <div class="col-span-4 card glass-panel" style="text-align:center; position:relative; overflow:hidden;">
-                <div style="position:absolute; top:-20px; right:-20px; background:var(--accent-1); color:white; padding:30px 40px 10px 20px; transform:rotate(45deg); font-weight:bold; font-size:0.8rem;">PREDICTION</div>
-                <h4 style="margin-bottom:1rem; color:var(--accent-1);">Forecast (Tomorrow)</h4>
-                <div id="fut-aqi" style="font-size: 4rem; font-weight:700; line-height:1;">--</div>
-                <div id="fut-status" class="badge" style="margin-top:1rem; margin-bottom:1rem;">--</div>
-            </div>
-            
-            <div class="col-span-4 card glass-panel" style="display:flex; flex-direction:column; justify-content:center;">
-                <h4 style="margin-bottom:1rem;">Trend Implication</h4>
-                <div id="trend-icon" style="font-size:4rem; text-align:center; margin-bottom:1rem;"></div>
-                <p id="trend-msg" style="text-align:center; font-weight:500;"></p>
-            </div>
-            
-            <!-- Trend Chart -->
-            <div class="col-span-12 card glass-panel" style="margin-top:2rem;">
-                <h3 style="margin-bottom:1rem;">Pollutant Trend Analysis</h3>
-                <div class="chart-container large">
-                    <canvas id="trendChart"></canvas>
-                </div>
-            </div>
+    <div class="col-span-4 glass hover-lift" style="text-align:center; padding:3rem; border:1px solid var(--accent-primary);">
+        <div style="color:var(--accent-primary); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:1.5rem;">ML Predicted Result</div>
+        <div id="fut-aqi" style="font-size: 5rem; font-weight:900; line-height:1; color:var(--accent-primary); filter: drop-shadow(0 0 20px rgba(99,102,241,0.3));">--</div>
+        <div id="fut-status" class="badge bg-moderate" style="margin-top:1.5rem;">TOMORROW</div>
+    </div>
+    
+    <div class="col-span-4 glass hover-lift" style="padding:3rem; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+        <div id="trend-icon" style="font-size:4rem; margin-bottom:1.5rem;"></div>
+        <p id="trend-msg" style="text-align:center; font-weight:500; font-size:1.1rem; color:var(--text-mid);"></p>
+    </div>
+    
+    <!-- Trend Chart -->
+    <div class="col-span-12 glass" style="margin-top:2rem; padding:4rem;">
+        <h3 class="gradient-text" style="font-size:1.5rem; margin-bottom:2rem;">Synchronized Pollutant Trajectory</h3>
+        <div class="chart-container" style="height:400px;">
+            <canvas id="trendChart"></canvas>
         </div>
     </div>
 </div>
@@ -67,29 +62,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!city) return alert("Please select a city");
         
         const btn = document.getElementById('forecast-btn');
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing';
         
         try {
             const res = await fetch(`/api/predict_future?city=${city}`);
             const data = await res.json();
             
             if(data.current_aqi && data.future_aqi) {
-                document.getElementById('forecast-result').style.display = 'block';
+                document.getElementById('forecast-result').style.display = 'grid';
                 
                 const currInfo = getAqiInfo(data.current_aqi);
                 const futInfo = getAqiInfo(data.future_aqi);
                 
-                // Current
-                document.getElementById('curr-aqi').textContent = data.current_aqi;
-                document.getElementById('curr-aqi').className = currInfo.colorClass;
-                document.getElementById('curr-status').textContent = currInfo.label;
-                document.getElementById('curr-status').className = `badge ${currInfo.bgClass}`;
-                
-                // Future
-                document.getElementById('fut-aqi').textContent = data.future_aqi;
-                document.getElementById('fut-aqi').className = futInfo.colorClass;
-                document.getElementById('fut-status').textContent = futInfo.label;
-                document.getElementById('fut-status').className = `badge ${futInfo.bgClass}`;
+                // Today
+                const currEl = document.getElementById('curr-aqi');
+                currEl.textContent = Math.floor(data.current_aqi);
+                currEl.style.color = currInfo.colorHex;
+
+                // Tomorrow
+                const futEl = document.getElementById('fut-aqi');
+                futEl.textContent = Math.floor(data.future_aqi);
+                futEl.style.color = futInfo.colorHex;
                 
                 // Trend
                 const diff = data.future_aqi - data.current_aqi;
@@ -97,45 +90,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 const trendMsg = document.getElementById('trend-msg');
                 
                 if(diff > 10) {
-                    trendIcon.innerHTML = `<i class="fa-solid fa-arrow-trend-up text-vpoor"></i>`;
-                    trendMsg.textContent = "Air quality is expected to worsen tomorrow. Take precautions.";
+                    trendIcon.innerHTML = `<i class="fa-solid fa-arrow-trend-up" style="color:#ef4444"></i>`;
+                    trendMsg.textContent = "Forecast indicates significant elevation in atmospheric risk.";
                 } else if(diff < -10) {
-                    trendIcon.innerHTML = `<i class="fa-solid fa-arrow-trend-down text-good"></i>`;
-                    trendMsg.textContent = "Air quality is expected to improve tomorrow.";
+                    trendIcon.innerHTML = `<i class="fa-solid fa-arrow-trend-down" style="color:#10b981"></i>`;
+                    trendMsg.textContent = "Forecast indicates favorable clearing of particulate matter.";
                 } else {
-                    trendIcon.innerHTML = `<i class="fa-solid fa-minus text-moderate"></i>`;
-                    trendMsg.textContent = "Air quality is expected to remain relatively stable.";
+                    trendIcon.innerHTML = `<i class="fa-solid fa-minus" style="color:#eab308"></i>`;
+                    trendMsg.textContent = "Atmospheric conditions likely to remain in steady equilibrium.";
                 }
                 
-                // Chart
+                // Chart Engine
                 if(chartInstance) chartInstance.destroy();
-                
                 const ctx = document.getElementById('trendChart');
-                
-                const labels = ['PM2.5', 'PM10', 'NO2', 'SO2', 'O3'];
-                const currData = [data.current_components.pm2_5, data.current_components.pm10, data.current_components.no2, data.current_components.so2, data.current_components.o3];
-                const futData = [data.future_components.pm2_5, data.future_components.pm10, data.future_components.no2, data.future_components.so2, data.future_components.o3];
                 
                 chartInstance = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: labels,
+                        labels: ['PM2.5', 'PM10', 'NO2', 'SO2', 'O3'],
                         datasets: [
                             {
-                                label: 'Today',
-                                data: currData,
-                                borderColor: 'rgba(56, 189, 248, 1)',
-                                backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                                fill: true,
-                                tension: 0.4
+                                label: 'Current State',
+                                data: [data.current_components.pm2_5, data.current_components.pm10, data.current_components.no2, data.current_components.so2, data.current_components.o3],
+                                borderColor: 'rgba(255, 255, 255, 0.4)',
+                                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                fill: true, tension: 0.4
                             },
                             {
-                                label: 'Tomorrow (Predicted)',
-                                data: futData,
-                                borderColor: 'rgba(234, 179, 8, 1)',
-                                backgroundColor: 'transparent',
-                                borderDash: [5, 5],
-                                tension: 0.4
+                                label: 'Forecast Matrix',
+                                data: [data.future_components.pm2_5, data.future_components.pm10, data.future_components.no2, data.future_components.so2, data.future_components.o3],
+                                borderColor: 'rgba(99, 102, 241, 1)',
+                                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                                fill: true, tension: 0.4, borderDash: [5, 5]
                             }
                         ]
                     },
@@ -143,8 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         responsive: true,
                         maintainAspectRatio: false,
                         scales: {
-                            y: { grid: { color: 'rgba(255,255,255,0.05)' } },
-                            x: { grid: { color: 'rgba(255,255,255,0.05)' } }
+                            y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b'} },
+                            x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b'} }
                         }
                     }
                 });
@@ -152,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(e) {
             console.error(e);
         } finally {
-            btn.innerHTML = '<i class="fa-solid fa-cloud-sun"></i> Forecast Tomorrow';
+            btn.innerHTML = 'Forecast Tomorrow';
         }
     });
 });
