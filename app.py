@@ -27,24 +27,24 @@ except Exception as e:
     print(f"Error loading model: {e}")
 
 # --- API KEY INITIALIZATION ---
-# 1. First, check for standard individual keys (The professional way)
+# 1. First, check for professional individual keys
+aqicn_token = os.getenv("AQICN_TOKEN", "")  # NEW: Official Station Data
 openweathermap_api_key = os.getenv("OPENWEATHER_API_KEY", "")
 news_api_key = os.getenv("NEWS_API_KEY", "")
 
-# 2. If missing, look for a combined string (comma-separated)
-# We check both "API_KEYS" and the accidental "AQI_API_KEY" name seen in Render
+# 2. If missing, look for a combined string (fallback)
 combined_keys = os.getenv("API_KEYS") or os.getenv("AQI_API_KEY")
 
-if combined_keys and (not openweathermap_api_key or not news_api_key):
-    # Split by comma and clean up whitespace
+if combined_keys and (not openweathermap_api_key or not aqicn_token):
     keys = [k.strip() for k in combined_keys.split(",")]
-    if len(keys) >= 1 and not openweathermap_api_key:
-        openweathermap_api_key = keys[0]
-    if len(keys) >= 2 and not news_api_key:
-        news_api_key = keys[1]
+    if len(keys) >= 1:
+        # If the user only has ONE key, we try it as AQICN first, then OpenWeather
+        if not aqicn_token: aqicn_token = keys[0]
+        if not openweathermap_api_key: openweathermap_api_key = keys[0]
 
-# Log for the user (visible in Render logs)
-print(f"Server Initialized | Weather API: {'OK' if openweathermap_api_key else 'MISSING'} | News API: {'OK' if news_api_key else 'MISSING'}")
+# Log for the user
+api_source = "AQICN (Station)" if aqicn_token else ("OpenWeather (Satellite)" if openweathermap_api_key else "NONE")
+print(f"Server Initialized | Data Source: {api_source} | News API: {'OK' if news_api_key else 'MISSING'}")
 
 REAL_COORDS = {
     'Delhi': (28.7041, 77.1025), 'Mumbai': (19.0760, 72.8777), 'Bangalore': (12.9716, 77.5946),
@@ -155,41 +155,75 @@ def fetch_pollution_data(city):
     # Cache for 1 hour (3600 seconds)
     if city in pollution_cache and (now - pollution_cache[city]['timestamp'] < 3600):
         data = pollution_cache[city]['data']
-        
-        # IMPROVEMENT: If the cache has "mock" data but we now have an API key, 
-        # force a fresh fetch to try and get "live" data.
-        if data.get('source') in ['mock', 'mock_error'] and openweathermap_api_key:
-            pass # Continue to fetch logic below
+        # Force fresh fetch if cache was mock but we now have keys
+        if data.get('source') in ['mock', 'mock_error'] and (aqicn_token or openweathermap_api_key):
+            pass
         else:
-            if 'source' not in data:
-                data['source'] = 'live' if openweathermap_api_key else 'mock'
             return data
 
-    if not openweathermap_api_key:
-        data = get_mock_city_data(city)
-        lat, lon = REAL_COORDS.get(city, (20.0, 78.0))
-        res = {'city': city, 'lat': lat, 'lon': lon, 'data': data['list'][0]['components'], 'source': 'mock'}
-    else:
+    # 1. Try AQICN (Most accurate)
+    if aqicn_token:
+        try:
+            url = f"https://api.waqi.info/feed/{city}/?token={aqicn_token}"
+            response = requests.get(url, timeout=5)
+            data = response.json()
+            if data.get('status') == 'ok' and isinstance(data.get('data'), dict):
+                d = data['data']
+                iaqi = d.get('iaqi', {})
+                # Safely get coordinates, fallback to our internal list if missing
+                geo = d.get('city', {}).get('geo', [])
+                if isinstance(geo, list) and len(geo) >= 2:
+                    lat, lon = geo[0], geo[1]
+                else:
+                    lat, lon = REAL_COORDS.get(city, (20.0, 78.0))
+                
+                # Map IAQI to our internal format with safer defaults
+                comps = {
+                    'pm2_5': iaqi.get('pm25', {}).get('v', 0),
+                    'pm10': iaqi.get('pm10', {}).get('v', 0),
+                    'no2': iaqi.get('no2', {}).get('v', 0),
+                    'so2': iaqi.get('so2', {}).get('v', 0),
+                    'co': iaqi.get('co', {}).get('v', 0) * 1000, 
+                    'o3': iaqi.get('o3', {}).get('v', 0)
+                }
+                res = {
+                    'city': city,
+                    'lat': lat,
+                    'lon': lon,
+                    'data': comps,
+                    'aqi': d.get('aqi', 0),
+                    'source': 'live'
+                }
+                pollution_cache[city] = {'timestamp': now, 'data': res}
+                save_cache(pollution_cache)
+                return res
+            else:
+                # If AQICN says 'ok' but data is missing or it's an error, log it
+                msg = data.get('data', 'No detail') if isinstance(data.get('data'), str) else 'Data format error'
+                print(f"AQICN Issue for {city}: {data.get('status')} - {msg}")
+        except Exception as e:
+            print(f"AQICN Exception for {city}: {str(e)}")
+
+    # 2. Fallback to OpenWeather
+    if openweathermap_api_key:
         try:
             geo_url = f"http://api.openweathermap.org/geo/1.0/direct?q={city},IN&limit=1&appid={openweathermap_api_key}"
-            geo_response = requests.get(geo_url, timeout=5)
-            geo_data = geo_response.json()
-            if not geo_data: raise ValueError("City not found")
-            lat, lon = geo_data[0]['lat'], geo_data[0]['lon']
-            ap_url = f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={openweathermap_api_key}"
-            ap_response = requests.get(ap_url, timeout=5)
-            # Add debug printing to see the real error from OpenWeather
-            if ap_response.status_code != 200:
-                print(f"OpenWeather Error for {city}: {ap_response.status_code} - {ap_response.text}")
-            
-            ap_data = ap_response.json()
-            res = {'city': city, 'lat': lat, 'lon': lon, 'data': ap_data['list'][0]['components'], 'source': 'live'}
+            geo_data = requests.get(geo_url, timeout=5).json()
+            if geo_data:
+                lat, lon = geo_data[0]['lat'], geo_data[0]['lon']
+                ap_url = f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={openweathermap_api_key}"
+                ap_data = requests.get(ap_url, timeout=5).json()
+                res = {'city': city, 'lat': lat, 'lon': lon, 'data': ap_data['list'][0]['components'], 'source': 'live'}
+                pollution_cache[city] = {'timestamp': now, 'data': res}
+                save_cache(pollution_cache)
+                return res
         except Exception as e:
-            print(f"Critical Error for {city}: {str(e)}")
-            data = get_mock_city_data(city)
-            f_lat, f_lon = REAL_COORDS.get(city, (20.0, 78.0))
-            res = {'city': city, 'lat': f_lat, 'lon': f_lon, 'data': data['list'][0]['components'], 'source': 'mock_error'}
-    
+             print(f"OpenWeather Error for {city}: {e}")
+
+    # 3. Fallback to Mock
+    data = get_mock_city_data(city)
+    f_lat, f_lon = REAL_COORDS.get(city, (20.0, 78.0))
+    res = {'city': city, 'lat': f_lat, 'lon': f_lon, 'data': data['list'][0]['components'], 'source': 'mock'}
     pollution_cache[city] = {'timestamp': now, 'data': res}
     save_cache(pollution_cache)
     return res

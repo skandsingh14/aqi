@@ -143,6 +143,10 @@ function calculateProxyAqi(comps) {
         else return 400 + (x - 748) * 100 / 540;
     }
 
+    // NEW: If the API (like AQICN) already provides the official AQI, use it directly!
+    if (comps.aqi) return Math.min(500, Math.max(10, Math.floor(comps.aqi)));
+    if (typeof comps.aqi === 'number') return Math.min(500, Math.max(10, Math.floor(comps.aqi)));
+
     // AQI is the highest sub-index of any single pollutant
     let aqi = Math.max(
         calc_pm25(comps.pm2_5),
