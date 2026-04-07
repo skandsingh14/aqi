@@ -73,7 +73,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bulkRes = await fetch(`/api/pollution_bulk?cities=${INDIAN_CITIES.join(',')}`);
     const bulkData = await bulkRes.json();
     
-    if (Array.isArray(bulkData)) {
+    if (Array.isArray(bulkData) && bulkData.length > 0) {
+        // Update Global API Status
+        if (typeof updateapiStatus === 'function') {
+            const hasLiveData = bulkData.some(item => item.source === 'live');
+            updateapiStatus(hasLiveData ? 'live' : 'mock');
+        }
+        
         bulkData.forEach(item => {
             if (item.data) {
                 const aqi = calculateProxyAqi(item.data);

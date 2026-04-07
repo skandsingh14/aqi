@@ -208,6 +208,9 @@ def api_pollution_bulk():
     with ThreadPoolExecutor(max_workers=min(20, len(cities) + 1)) as executor:
         results = list(executor.map(fetch_pollution_data, cities))
         
+    if results:
+        print(f"📡 API Status Check | City: {results[0]['city']} | Source: {results[0].get('source')} | Key OK: {bool(openweathermap_api_key)}")
+        
     return jsonify(results)
 
 @app.route('/api/predict', methods=['POST'])
